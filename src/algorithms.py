@@ -18,7 +18,7 @@ def bernTS(arm_state, alphaPrior=1, betaPrior=1):
 
 def epsilonGreedy(arm_state, epsilon=0.9):
     # Slowly decrease the probability to do something random
-    epsilon = epsilon * (0.9 ** arm_state.total_trials)
+    epsilon = epsilon * (0.9**arm_state.total_pulls)
 
     if np.random.random() < epsilon:
         # Choose at random
@@ -36,8 +36,8 @@ def completelyRandom(arm_state):
 
 def ucb(arm_state):
     confidence_bounds = arm_state.success_rates + np.sqrt(
-        (2 * np.log(np.sum(arm_state.total_trials + 1)))
-        / np.where(arm_state.total_trials == 0, 1, arm_state.total_trials)
+        (2 * np.log(np.sum(arm_state.total_pulls + 1)))
+        / np.where(arm_state.total_pulls == 0, 1, arm_state.total_pulls)
     )
 
     return np.argmax(confidence_bounds)

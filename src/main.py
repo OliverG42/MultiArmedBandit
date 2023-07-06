@@ -12,7 +12,8 @@ class ArmState:
         self.num_arms = len(reward_probs)
         self.successes = np.zeros(self.num_arms)
         self.failures = np.zeros(self.num_arms)
-        self.total_trials = 0
+        self.arm_pulls = np.zeros(self.num_arms)
+        self.total_pulls = 0
         self.success_rates = np.ones(self.num_arms)
         self.regrets = []
 
@@ -23,10 +24,13 @@ class ArmState:
         else:
             self.failures[arm_number] += 1
 
-        self.total_trials += 1
+        self.arm_pulls[arm_number] += 1
+        self.total_pulls += 1
 
         # Update success rates
-        self.success_rates[arm_number] = self.successes[arm_number] / self.total_trials
+        self.success_rates[arm_number] = (
+            self.successes[arm_number] / self.arm_pulls[arm_number]
+        )
 
         # Update regret
         self.regrets.append(self.max_prob - self.reward_probs[arm_number])
@@ -56,7 +60,7 @@ def makeGraph(reward_probs):
     ]
     colours = ["red", "yellow", "green", "blue", "purple", "pink"]
 
-    num_trials = 100 + 1  # How many "lever pulls" are there?
+    num_trials = 1000  # How many "lever pulls" are there?
     num_samples = 100  # How many "runs" are there?
     errorBarInterval = int(num_trials / 10)
 
@@ -69,18 +73,27 @@ def makeGraph(reward_probs):
         ]
 
         avg_cumulative_regrets = np.mean(all_cumulative_regrets, axis=0)
-        std_cumulative_regrets = np.std(avg_cumulative_regrets)
+        std_cumulative_regrets = np.std(all_cumulative_regrets, axis=0)
+
+        max_value = np.max(avg_cumulative_regrets + std_cumulative_regrets)
+
+        print(max_value)
 
         # Plot the smooth curve of average cumulative regrets with error bars
         plt.errorbar(
-            range(1, num_trials + 1, errorBarInterval),
+            range(0, num_trials, errorBarInterval),
             avg_cumulative_regrets[::errorBarInterval],
-            yerr=std_cumulative_regrets,
+            yerr=std_cumulative_regrets[::errorBarInterval],
             label=f"{choosing_function.__name__}",
             linewidth=2,
             color=colour,
             alpha=0.8,
         )
+
+    # Set the x-axis and y-axis limits with some padding
+    # This prevents the error bars from protruding into <0, and the y-axis not hitting (0, 0)
+    plt.xlim(0, plt.xlim()[1] * 1.01)
+    plt.ylim((0, plt.ylim()[1] * 1.01))
 
     plt.xlabel(f"Trials {reward_probs}")
     plt.ylabel("Cumulative Regret")
