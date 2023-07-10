@@ -1,6 +1,7 @@
 import random
 
-from main import *
+from ArmState import ArmState
+import numpy as np
 
 
 def test_interactions():
