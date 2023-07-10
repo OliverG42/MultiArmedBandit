@@ -1,0 +1,14 @@
+\newcommand{\pseudobox}[3][0.85\textwidth]{
+    \begin{center}
+    \fbox{
+    \begin{minipage}{0.85\textwidth}
+        \begin{algorithm}[H]
+        \SetAlgoLined
+        \fontsize{12}{12}\selectfont
+        #2 % Algorithm goes here!
+        \caption{#3}
+        \end{algorithm}
+    \end{minipage}
+    }\newline
+    \end{center}
+}
