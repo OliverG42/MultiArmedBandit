@@ -1,0 +1,30 @@
+\documentclass[11pt]{report}
+
+\usepackage{projectreport}
+\linespread{1.5}
+
+\newcommand{\name}{Oliver Gay}
+\newcommand{\course}{Mathematics and Computer Science}
+
+\newcommand{\projecttitle}{The Project Title Goes Here}
+\newcommand{\submissiondate}{April 2024}
+
+\begin{document}
+
+\maketitle
+
+\chapter*{Abstract}
+\blindtext[1]
+
+\newpage
+\setcounter{page}{0}
+\pagenumbering{arabic}
+
+\include{chapter1}
+\include{chapter2} 
+
+\addcontentsline{toc}{chapter}{References}
+\renewcommand\bibname{References}
+\printbibliography
+
+\end{document}
