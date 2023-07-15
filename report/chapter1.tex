@@ -1,25 +1,57 @@
 \chapter{Introduction}
 \label{cha:chapter1} % (labels for cross referencing)
 
+
+%% 
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+
+%%
+\newcommand{\armDistribution}[1]{\mathrm{P}_{#1}}
+\newcommand{\armPopulationMean}[1]{\mu_{#1}}
+\newcommand{\armDistributionVect}{\mathrm{P}}
+
+\newcommand{\action}[1]{A_{#1}}
+
+\newcommand{\reward}[2]{
+   \ifthenelse{\isempty{#2}}{
+   Y_{#1}(\action{#1})}{
+   Y_{#1}(#2)}}
+
+\newcommand{\policy}{\varphi}
+
+\newcommand{\cumulativeRegret}[2]{\mathcal{R}_{#1}(#2)}
+
+
+
 The Multi-Armed Bandit problem (often abbreviated to MAB), is a framework in machine learning and decision theory, in which, an agent is presented with a set of actions, each with an unknown reward distribution assigned to it. The agent's objective is to attempt to maximise it's cumulative reward over a period of time by analysing the information it gathers from performing actions.
 
 For the purpose of this paper, we define the following:
 
-A MAB has $K$ arms with distributions $D = {d_1, \dots , d_K}$, such that arm $i$ has distribution $d_i$. Let $\mu_1, \dots , \mu_K$ be the mean of the above distributions.
+We will consider a multi-armed bandit problem with $K$ arms and a time horizon $T$, where $K$, $N \in \N$.
 
-For each time step $0 <= t$, an arm $i$ is chosen, and the reward is observed as $r_t$. The regret $\rho$ for time $t$ is defined as: $$\rho_t = \max\{\mu\} - r_t$$
-And the cumulative regret $\gamma$ by:
-$$\gamma_t = t * \max\{\mu\} - \sum _{n=1}^{t}{\rho_n},$$
+A MAB with $K$ arms with distributions $\armDistributionVect = (\armDistribution{1}, \dots , \armDistribution{K})$, such that arm $i$ has distribution $\armDistribution{k}$. Let $\armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions.
 
-\section{The Bernoulli Bandit Problem}
+
+For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. We shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy $\policy: \bigcup_{\ell \in \N}([K]\times \R)^\ell \times [0,1] \rightarrow [K]$ denotes a function for selecting actions, so that at each time step $t \in [T]$, we have $\action{t}= \policy((\action{1},\reward{1}{}),\ldots,(\action{t-1},\reward{t-1}{}),W_t)$, with $W_t$ denoting an independent random variable.
+
+
+The (random) cumulative regret for a policy $\policy$ is then defined by
+\begin{align*}
+\cumulativeRegret{T}{\policy}:=T \cdot \max_{k \in [K]} \armPopulationMean{k}-\sum_{t \in [T]}\armPopulationMean{\action{t}},
+\end{align*}
+where the actions $\action{t}$ are selected via the policy $\policy$.
+
+
+\section{The Bernoulli Bandit Vs The Gaussian Bandit}
 \label{sec:BernoulliBandit}
 
-The Bernoulli bandit problem (where the rewards are drawn from a Bernoulli distribution of unknown mean).
- 
-\subsection{The Gaussian Bandit Problem}
-\label{sec:GaussianBandit}
+The Bernoulli bandit problem and the Gaussian bandit problem are both sequential decision-making problems:
 
-The Gaussian bandit problem (where the rewards are drawn from a Gaussian distribution with unit variance and unknown mean).
+In the Bernoulli bandit, the rewards are drawn from a Bernoulli distribution of unknown mean, which manifests as a binary result between two possible outcomes (normally success or failure). The goal is to select arms in a strategic manner to maximize the cumulative reward. This should balance exploration to learn more about other arm's expected means, and exploitation of the best-performing arms.
+
+In contrast, the Gaussian bandit involves rewards drawn from a Gaussian distribution with unknown variance and mean, which manifests as a continuous outcome between [0, 1]. The objective is identical to the Bernoulli bandit, but the focus is on estimating unknown means and using information to make optimal decisions.
 
 \subsection{Algorithmic Approaches}
 \label{sec:Algorithms}
