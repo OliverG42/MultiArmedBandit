@@ -1,13 +1,13 @@
 import random
 
 from matplotlib import pyplot as plt
-from itertools import combinations
-from scipy.optimize import brentq, fsolve
-from scipy.special import comb
+from scipy.special import binom
 from ArmState import ArmState
+from Agents import Agent
+import functools
 
 
-def plotProbSuccess(wins, losses, colour="red", identifier=None):
+def plotProbSuccess(wins, losses, colour="black", identifier=None):
     if identifier is None:
         identifier = colour
 
@@ -16,7 +16,7 @@ def plotProbSuccess(wins, losses, colour="red", identifier=None):
 
     plt.plot(
         [x / precision for x in range(0, precision)],
-        [probSuccesRate(x / precision, wins, losses) for x in range(0, precision)],
+        [probSuccessRate(x / precision, wins, losses) for x in range(0, precision)],
         label=identifier,
         linewidth=1.5,
         color=colour,
@@ -24,79 +24,71 @@ def plotProbSuccess(wins, losses, colour="red", identifier=None):
     )
 
 
-def bell_curve(x, wins, losses):
-    return comb(wins + losses, wins) * (x ** wins) * ((1 - x) ** losses)
+# Utilises recursive definition of nCr with a dynamic cache from functools
+@functools.lru_cache(maxsize=None)
+def binomial(n, k):
+    if k == 0:
+        return 1
+    if n == k:
+        return 1
+    return binom(n - 1, k - 1) + binom(n - 1, k)
 
 
-def probSuccesRate(x, wins, losses):
+def bellCurve(x, wins, losses):
+    n = wins + losses
+    result = binomial(n, wins) * (x ** wins) * ((1 - x) ** losses)
+    return result
+
+
+def probSuccessRate(x, wins, losses):
     highest = wins / (wins + losses) if wins + losses != 0 else 1
-    normalising_factor = 1 / bell_curve(highest, wins, losses)
-    return bell_curve(x, wins, losses) * normalising_factor
+    normalising_factor = 1 / bellCurve(highest, wins, losses)
+    return bellCurve(x, wins, losses) * normalising_factor
 
 
-def computeGradient(func1, func2, x):
-    h = 1e-6
+class ripple(Agent):
+    def __init__(self, arm_state, limit_down=0.01):
+        super().__init__()
+        self._initialize()
+        self.num_arms = arm_state.num_arms
+        self.limit_down = limit_down
+        self.functions = [
+            lambda x, i=i: probSuccessRate(
+                x, arm_state.successes[i], arm_state.failures[i]
+            )
+            for i in range(0, self.num_arms)
+        ]
 
-    gradient_func1 = (func1(x + h) - func1(x)) / h
-    gradient_func2 = (func2(x + h) - func2(x)) / h
+    def chooseLever(self, arm_state):
+        arm_value = 1
+        result = -1
 
-    return gradient_func1, gradient_func2
-
-
-def rippleOld(the_arm_state):
-    functions = [lambda x, i=i: probSuccesRate(x, the_arm_state.successes[i], the_arm_state.failures[i]) for i in
-                 range(0, the_arm_state.num_arms)]
-
-    pairs = list(combinations(functions, 2))
-
-    rightmost_intersection_pair = [None, None]
-    rightmost_intersection_x = -1
-
-    for (f, g) in pairs:
-        intersection_x = fsolve(lambda x: f(x) - g(x), 0.5)[0]
-
-        print(functions.index(f), functions.index(g), "intersect at:", intersection_x)
-
-        if intersection_x > rightmost_intersection_x:
-            rightmost_intersection_x = intersection_x
-            rightmost_intersection_pair = [f, g]
-
-    # No intersections found?
-    if rightmost_intersection_x == -1:
-        return random.randrange(0, the_arm_state.num_arms)
-
-    gradient_func1, gradient_func2 = computeGradient(rightmost_intersection_pair[0], rightmost_intersection_pair[1],
-                                                     rightmost_intersection_x)
-
-    print(rightmost_intersection_x)
-    print(gradient_func1, gradient_func2)
-
-    if gradient_func1 > gradient_func2:
-        return functions.index(rightmost_intersection_pair[0])
-    else:
-        return functions.index(rightmost_intersection_pair[1])
-
-
-def ripple(the_arm_state, limitDown=0.05):
-    functions = [lambda x, i=i: probSuccesRate(x, the_arm_state.successes[i], the_arm_state.failures[i]) for i in
-                 range(0, the_arm_state.num_arms)]
-
-    arm_value = 1
-    while True:
-        for f in functions:
-            if f(arm_value) > limitDown:
-                return functions.index(f)
+        while True:
+            values = [f(arm_value) for f in self.functions]
+            if any(v > self.limit_down for v in values):
+                valid_options = [
+                    i for i, item in enumerate(values) if item > self.limit_down
+                ]
+                result = random.choice(valid_options)
+                break
             arm_value -= 0.01
+
+        self.functions[result] = lambda x, result=result: probSuccessRate(
+            x, arm_state.successes[result], arm_state.failures[result]
+        )
+
+        return result
 
 
 def doGraph(wins, losses):
     plt.figure(figsize=(10, 6))
-    plt.xlabel("Chance of Success")
-    plt.ylabel("Probability Guess is Correct")
+    plt.xlabel("Chance of Success - p")
+    plt.subplots_adjust(left=0.2)
+    plt.ylabel("\u2119(wins,losses | p)", rotation=0, ha="right")
 
-    colours = ["red", "yellow", "green", "blue", "purple", "pink"]
+    colours = ["red", "yellow", "green"]
 
-    for (win, loss, colour) in zip(wins, losses, colours):
+    for win, loss, colour in zip(wins, losses, colours):
         plotProbSuccess(win, loss, colour=colour, identifier=colours.index(colour))
 
     plt.legend()
@@ -110,6 +102,8 @@ if __name__ == "__main__":
     arm_state.failures = [10, 5, 10]
     arm_state.success_rates = [0.5, 0.6, 0.4]
 
-    print(ripple(arm_state))
+    rippleAgent = ripple(arm_state)
+    choice = rippleAgent.chooseLever(arm_state)
+    assert choice == 1
 
     doGraph(arm_state.successes, arm_state.failures)

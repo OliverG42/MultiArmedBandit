@@ -1,129 +1,171 @@
 import cProfile
-import multiprocessing
 import pstats
 
 import matplotlib.pyplot as plt
 import numpy as np
+from multiprocessing import Pool
 
-import concurrent.futures
-
-from algorithms import bernTS, bernGreedy, epsilonGreedy, ucb, softmax
-from experimental import ripple
+from Agents import bernTS, epsilonGreedy, ucb, softmax, bernGreedy
 from ArmState import ArmState
+from ColourSink import ColourSink
+from experimental import ripple
 
 
-def perform_sampling(choosing_function, reward_probs, num_trials):
-    arm_state = ArmState(reward_probs)
-
-    for _ in range(num_trials):
-        chosen_arm = choosing_function(arm_state)
+def runTrials(choosing_agent, arm_state, num_trials):
+    for i in range(num_trials):
+        chosen_arm = choosing_agent.chooseLever(arm_state)
         arm_state.pull_arm(chosen_arm)
 
-    return arm_state.regrets
+    saved_regrets = arm_state.regrets
+
+    # Reset the agent and arm_state
+    choosing_agent.reset()
+    arm_state.reset()
+
+    return saved_regrets
 
 
-def compute(choosing_function, reward_probs, num_trials, num_samples):
-    return [
-        np.cumsum(perform_sampling(choosing_function, reward_probs, num_trials))
-        for _ in range(num_samples)
-    ]
+def runSamples(choosing_agent, arm_state, num_trials, num_samples):
+    results = []
+
+    for _ in range(num_samples):
+        trial_results = runTrials(choosing_agent, arm_state, num_trials)
+
+        cumulative_results = np.cumsum(trial_results)
+
+        results.append(cumulative_results)
+
+    return results
 
 
-def plot(
-    choosing_function,
-    colour,
-    num_trials,
-    errorBarInterval,
-    offset,
-    all_cumulative_regrets,
+def runAnalysisWithoutMultiprocessing(
+        arm_state, functions=None, num_trials=100, num_samples=100
 ):
-    avg_cumulative_regrets = np.mean(all_cumulative_regrets, axis=0)
-    std_cumulative_regrets = np.std(all_cumulative_regrets, axis=0)
+    if functions is None:
+        raise Exception("I didn't receive functions to analyse!")
 
-    # Plot the smooth curve of average cumulative regrets with error bars
-    plt.plot(
-        range(0, num_trials),
-        avg_cumulative_regrets,
-        label=f"{choosing_function.__name__}",
-        linewidth=1.5,
-        color=colour,
-        alpha=0.8,
-    )
+    results = []
 
-    # Plot the error bars
-    # The fmt parameter ensures this doesn't plot the line, which would be jagged
-    plt.errorbar(
-        range(offset, num_trials, errorBarInterval),
-        avg_cumulative_regrets[::errorBarInterval],
-        yerr=std_cumulative_regrets[::errorBarInterval],
-        fmt=" ",
-        color=colour,
-        alpha=0.8,
-    )
+    for choosing_agent in functions:
+        result = runSamples(choosing_agent, arm_state, num_trials, num_samples)
+        results.append((result, choosing_agent))
+
+    return results
 
 
-def makeGraph(reward_probs):
-    print(reward_probs)
+def runSamplesHelper(args):
+    return runSamples(*args)
+
+
+def runAnalysisWithMultiprocessing(
+        arm_state, functions=None, num_trials=100, num_samples=100
+):
+    if functions is None:
+        raise Exception("I didn't receive functions to analyse!")
+
+    pool = Pool()
+
+    inputs = [(choosing_agent, arm_state, num_trials, num_samples) for choosing_agent in functions]
+    results = pool.map(runSamplesHelper, inputs)
+
+    pool.close()
+    pool.join()
+
+    return list(zip(results, functions))
+
+
+def plotGraph(data, num_trials):
+    errorBarInterval = int(num_trials / 10)
     plt.figure(figsize=(10, 6))
 
-    functions = [
-        bernTS,
-        bernGreedy,
-        epsilonGreedy,
-        ucb,
-        softmax,
-        ripple
-    ]
+    colour_sink = ColourSink()
+    colours = colour_sink.getColour(num_colours=len(agents))
 
-    colours = ["red", "yellow", "green", "blue", "purple", "pink"]
+    offset = 0
+    for all_cumulative_regrets, choosing_agent in data:
+        colour = colours.pop(0)
 
-    num_trials = 1000  # How many "lever pulls" are there?
-    num_samples = 100  # How many "runs" are there?
-    errorBarInterval = int(num_trials / 10)
+        avg_cumulative_regrets = np.mean(all_cumulative_regrets, axis=0)
+        std_cumulative_regrets = np.std(all_cumulative_regrets, axis=0)
 
-    # Adjust as needed
-    workers = multiprocessing.cpu_count()
+        # Plot the smooth curve of average cumulative regrets with error bars
+        plt.plot(
+            range(0, num_trials),
+            avg_cumulative_regrets,
+            label=f"{choosing_agent.name}",
+            linewidth=1.5,
+            color=colour,
+            alpha=0.8,
+        )
 
-    # Create a thread pool executor
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = []
+        # Plot the error bars
+        # The fmt parameter ensures this doesn't plot the line, which would be jagged
+        plt.errorbar(
+            range(offset, num_trials, errorBarInterval),
+            avg_cumulative_regrets[::errorBarInterval],
+            yerr=std_cumulative_regrets[::errorBarInterval],
+            fmt=" ",
+            color=colour,
+            alpha=0.8,
+        )
 
-        for choosing_function, colour in zip(functions, colours):
-            future = executor.submit(
-                compute, choosing_function, reward_probs, num_trials, num_samples
-            )
-            futures.append((future, choosing_function, colour))
-            plot(
-                choosing_function,
-                colour,
-                num_trials,
-                errorBarInterval,
-                colours.index(colour),
-                future.result(),
-            )
-
-        # Wait for all the computations to complete
-        concurrent.futures.wait([future for future, _, _ in futures])
+        offset += 1
 
     # Set the x-axis and y-axis limits with some padding
     # This prevents the error bars from protruding into <0, and the y-axis not hitting (0, 0)
     plt.xlim(0, plt.xlim()[1] * 1.01)
     plt.ylim((0, plt.ylim()[1] * 1.01))
 
-    plt.xlabel(f"Trials {reward_probs}")
+    plt.xlabel("Trials")
     plt.ylabel("Cumulative Regret")
     plt.legend()
+    plt.show()
 
 
-if __name__ == "__main__":
+def profile(function, *args):
     profiler = cProfile.Profile()
     profiler.enable()
-    makeGraph([0.4, 0.45, 0.5])
+
+    outcome = function(*args)
+
     profiler.disable()
     stats = pstats.Stats(profiler).sort_stats("tottime")
     stats.print_stats(10)
     stats = pstats.Stats(profiler).sort_stats("cumtime")
     stats.print_stats(10)
-    print(stats.total_tt)
-    plt.show()
-    # plt.savefig("graph.png")
+    # noinspection PyUnresolvedReferences
+    print("Time taken: " + str(round(stats.total_tt, 3)) + "s")
+
+    return outcome
+
+
+if __name__ == "__main__":
+    probabilities = [x / 10 for x in range(0, 9)]
+    arm_state = ArmState(probabilities)
+    num_trials = 1000
+    num_samples = 100
+
+    agents = [bernTS(), epsilonGreedy(), ucb(), softmax(), bernGreedy(arm_state.num_arms, burn_time=5)]
+
+    do_profile = True
+    do_multiprocessing = True
+
+    analyse_modes = [runAnalysisWithoutMultiprocessing, runAnalysisWithMultiprocessing]
+
+    if do_profile:
+        data = profile(
+            analyse_modes[do_multiprocessing],
+            arm_state,
+            agents,
+            num_trials,
+            num_samples,
+        )
+    else:
+        data = analyse_modes[do_multiprocessing](
+            arm_state,
+            agents,
+            num_trials,
+            num_samples,
+        )
+
+    plotGraph(data, num_trials)

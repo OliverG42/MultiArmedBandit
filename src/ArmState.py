@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class ArmState:
     def __init__(self, reward_probs):
         self.reward_probs = reward_probs
@@ -26,9 +27,12 @@ class ArmState:
         self.total_pulls += 1
 
         # Update success rates
-        self.success_rates[arm_number] = round(
-            self.successes[arm_number] / self.arm_pulls[arm_number], 4
+        self.success_rates[arm_number] = (
+            self.successes[arm_number] / self.arm_pulls[arm_number]
         )
 
         # Update regret
-        self.regrets.append(round(self.max_prob - self.reward_probs[arm_number], 4))
+        self.regrets.append(self.max_prob - self.reward_probs[arm_number])
+
+    def reset(self):
+        self.__init__(self.reward_probs)
