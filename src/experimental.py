@@ -1,10 +1,10 @@
+import functools
 import random
 
 from matplotlib import pyplot as plt
-from scipy.special import binom
-from ArmState import ArmState
+
 from Agents import Agent
-import functools
+from ArmState import ArmState
 
 
 def plotProbSuccess(wins, losses, colour="black", identifier=None):
@@ -24,26 +24,17 @@ def plotProbSuccess(wins, losses, colour="black", identifier=None):
     )
 
 
-# Utilises recursive definition of nCr with a dynamic cache from functools
-@functools.lru_cache(maxsize=None)
-def binomial(n, k):
-    if k == 0:
-        return 1
-    if n == k:
-        return 1
-    return binom(n - 1, k - 1) + binom(n - 1, k)
-
-
 def bellCurve(x, wins, losses):
-    n = wins + losses
-    result = binomial(n, wins) * (x ** wins) * ((1 - x) ** losses)
-    return result
+    return (x ** wins) * ((1 - x) ** losses)
 
 
+# Add a dynamic cache from functools
+@functools.lru_cache(maxsize=None)
 def probSuccessRate(x, wins, losses):
-    highest = wins / (wins + losses) if wins + losses != 0 else 1
-    normalising_factor = 1 / bellCurve(highest, wins, losses)
-    return bellCurve(x, wins, losses) * normalising_factor
+    most_probable = wins / (wins + losses) if wins + losses != 0 else 1
+
+    # Normalise the result
+    return bellCurve(x, wins, losses) / bellCurve(most_probable, wins, losses)
 
 
 class ripple(Agent):

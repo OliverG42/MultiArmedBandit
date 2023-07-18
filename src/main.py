@@ -143,12 +143,13 @@ if __name__ == "__main__":
     probabilities = [x / 10 for x in range(0, 9)]
     arm_state = ArmState(probabilities)
     num_trials = 1000
-    num_samples = 100
+    num_samples = 10
 
-    agents = [bernTS(), epsilonGreedy(), ucb(), softmax(), bernGreedy(arm_state.num_arms, burn_time=5)]
+    # agents = [bernTS(), epsilonGreedy(), ucb(), softmax(), bernGreedy(arm_state.num_arms, burn_time=5)]
+    agents = [ripple(arm_state)]
 
     do_profile = True
-    do_multiprocessing = True
+    do_multiprocessing = False
 
     analyse_modes = [runAnalysisWithoutMultiprocessing, runAnalysisWithMultiprocessing]
 
