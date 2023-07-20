@@ -18,6 +18,7 @@ class ArmState:
             outcome = np.random.binomial(1, self.reward_probs[arm_number])
         else:
             outcome = force_result
+
         if outcome:
             self.successes[arm_number] += 1
         else:

@@ -1,6 +1,7 @@
 import functools
-import random
+from copy import deepcopy
 
+import numpy as np
 from matplotlib import pyplot as plt
 
 from Agents import Agent
@@ -12,7 +13,7 @@ def plotProbSuccess(wins, losses, colour="black", identifier=None):
         identifier = colour
 
     precision = 4
-    precision = 10 ** precision
+    precision = 10**precision
 
     plt.plot(
         [x / precision for x in range(0, precision)],
@@ -25,11 +26,9 @@ def plotProbSuccess(wins, losses, colour="black", identifier=None):
 
 
 def bellCurve(x, wins, losses):
-    return (x ** wins) * ((1 - x) ** losses)
+    return (x**wins) * ((1 - x) ** losses)
 
 
-# Add a dynamic cache from functools
-@functools.lru_cache(maxsize=None)
 def probSuccessRate(x, wins, losses):
     most_probable = wins / (wins + losses) if wins + losses != 0 else 1
 
@@ -41,32 +40,59 @@ class ripple(Agent):
     def __init__(self, arm_state, limit_down=0.01):
         super().__init__()
         self._initialize()
+        self.name = self.name + " " + str(limit_down)
         self.num_arms = arm_state.num_arms
         self.limit_down = limit_down
-        self.functions = [
-            lambda x, i=i: probSuccessRate(
-                x, arm_state.successes[i], arm_state.failures[i]
+        self.search_increment = 0.001
+
+        self.intersection_points = [
+            self._findIntersection(
+                deepcopy(arm_state.successes[i]), deepcopy(arm_state.failures[i])
             )
             for i in range(0, self.num_arms)
         ]
+        self.arm_pulls_memory = deepcopy(arm_state.arm_pulls)
+
+    # Add a dynamic cache from functools
+    @functools.lru_cache(maxsize=None)
+    def _findIntersection(self, successes, failures):
+        arm_value = 1
+
+        while arm_value >= 0:
+            success_rate = probSuccessRate(arm_value, successes, failures)
+
+            if success_rate > self.limit_down:
+                return arm_value
+
+            arm_value -= self.search_increment
+
+        return None
+
+    def _doesNotWorkFindIntersection(self, successes, failures):
+        left = 0
+        right = 1
+
+        while left <= right:
+            mid = (left + right) / 2
+            success_rate = probSuccessRate(mid, successes, failures)
+
+            if success_rate > self.limit_down:
+                right = mid - self.search_increment
+            else:
+                left = mid + self.search_increment
+
+        return right
 
     def chooseLever(self, arm_state):
-        arm_value = 1
-        result = -1
+        # Find which intersection point(s) has changed
+        for i in range(0, self.num_arms):
+            if self.arm_pulls_memory[i] != arm_state.arm_pulls[i]:
+                # Change the intersection point
+                self.intersection_points[i] = self._findIntersection(
+                    arm_state.successes[i], arm_state.failures[i]
+                )
 
-        while True:
-            values = [f(arm_value) for f in self.functions]
-            if any(v > self.limit_down for v in values):
-                valid_options = [
-                    i for i, item in enumerate(values) if item > self.limit_down
-                ]
-                result = random.choice(valid_options)
-                break
-            arm_value -= 0.01
-
-        self.functions[result] = lambda x, result=result: probSuccessRate(
-            x, arm_state.successes[result], arm_state.failures[result]
-        )
+        result = np.argmax(self.intersection_points)
 
         return result
 
@@ -95,6 +121,7 @@ if __name__ == "__main__":
 
     rippleAgent = ripple(arm_state)
     choice = rippleAgent.chooseLever(arm_state)
+    print(choice)
     assert choice == 1
 
     doGraph(arm_state.successes, arm_state.failures)

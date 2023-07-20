@@ -1,11 +1,13 @@
 import cProfile
+import math
 import pstats
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
 from multiprocessing import Pool
 
-from Agents import bernTS, epsilonGreedy, ucb, softmax, bernGreedy
+from Agents import bernTS, epsilonGreedy, ucb, softmax, bernGreedy, completelyRandom
 from ArmState import ArmState
 from ColourSink import ColourSink
 from experimental import ripple
@@ -18,9 +20,9 @@ def runTrials(choosing_agent, arm_state, num_trials):
 
     saved_regrets = arm_state.regrets
 
-    # Reset the agent and arm_state
-    choosing_agent.reset()
+    # Reset the agent and initial_arm_state
     arm_state.reset()
+    choosing_agent.reset()
 
     return saved_regrets
 
@@ -39,16 +41,17 @@ def runSamples(choosing_agent, arm_state, num_trials, num_samples):
 
 
 def runAnalysisWithoutMultiprocessing(
-        arm_state, functions=None, num_trials=100, num_samples=100
+    arm_state, functions=None, num_trials=100, num_samples=100
 ):
     if functions is None:
-        raise Exception("I didn't receive functions to analyse!")
+        raise Exception("I didn't receive arm_functions to analyse!")
 
     results = []
 
     for choosing_agent in functions:
         result = runSamples(choosing_agent, arm_state, num_trials, num_samples)
         results.append((result, choosing_agent))
+        print("Finished with agent", choosing_agent.name)
 
     return results
 
@@ -58,14 +61,17 @@ def runSamplesHelper(args):
 
 
 def runAnalysisWithMultiprocessing(
-        arm_state, functions=None, num_trials=100, num_samples=100
+    arm_state, functions=None, num_trials=100, num_samples=100
 ):
     if functions is None:
-        raise Exception("I didn't receive functions to analyse!")
+        raise Exception("I didn't receive arm_functions to analyse!")
 
     pool = Pool()
 
-    inputs = [(choosing_agent, arm_state, num_trials, num_samples) for choosing_agent in functions]
+    inputs = [
+        (choosing_agent, arm_state, num_trials, num_samples)
+        for choosing_agent in functions
+    ]
     results = pool.map(runSamplesHelper, inputs)
 
     pool.close()
@@ -79,7 +85,7 @@ def plotGraph(data, num_trials):
     plt.figure(figsize=(10, 6))
 
     colour_sink = ColourSink()
-    colours = colour_sink.getColour(num_colours=len(agents))
+    colours = colour_sink.getColour(num_colours=len(data[1]))
 
     offset = 0
     for all_cumulative_regrets, choosing_agent in data:
@@ -139,14 +145,12 @@ def profile(function, *args):
     return outcome
 
 
-if __name__ == "__main__":
-    probabilities = [x / 10 for x in range(0, 9)]
-    arm_state = ArmState(probabilities)
-    num_trials = 1000
-    num_samples = 10
+def performTest(probabilities, agents):
+    print(probabilities)
+    num_trials = 400
+    num_samples = 100
 
-    # agents = [bernTS(), epsilonGreedy(), ucb(), softmax(), bernGreedy(arm_state.num_arms, burn_time=5)]
-    agents = [ripple(arm_state)]
+    arm_state = ArmState(probabilities)
 
     do_profile = True
     do_multiprocessing = False
@@ -170,3 +174,27 @@ if __name__ == "__main__":
         )
 
     plotGraph(data, num_trials)
+
+
+if __name__ == "__main__":
+    testing_probabilities = [
+        # Very low probabilities
+        [float("{:.3f}".format(random.uniform(0, 0.1))) for _ in range(5)],
+        # Very high probabilities
+        [float("{:.3f}".format(random.uniform(0.9, 0.999))) for _ in range(5)],
+        # Middling probabilities
+        [float("{:.3f}".format(random.uniform(0.3, 0.7))) for _ in range(5)],
+        # A complete mess of probabilities
+        [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(5)],
+        # A duel between Europe and American roulette red/black
+        [0.4865, 0.4737],
+        # Overloading with way too many options
+        [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(50)],
+        # Getting struck by lightning VS Being dealt a Royal Flush VS Bowling a 300-point game
+        # All algorithms on average perform terribly, which isn't surprising at all
+        [1 / 15300, 1 / 649739, 1 / 11500],
+    ]
+
+    for probabilities in testing_probabilities:
+        agents = [bernTS(), ripple(ArmState(probabilities), limit_down=0.2718)]
+        performTest(probabilities, agents)
