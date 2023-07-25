@@ -68,21 +68,6 @@ class ripple(Agent):
 
         return None
 
-    def _doesNotWorkFindIntersection(self, successes, failures):
-        left = 0
-        right = 1
-
-        while left <= right:
-            mid = (left + right) / 2
-            success_rate = probSuccessRate(mid, successes, failures)
-
-            if success_rate > self.limit_down:
-                right = mid - self.search_increment
-            else:
-                left = mid + self.search_increment
-
-        return right
-
     def chooseLever(self, arm_state):
         # Find which intersection point(s) has changed
         for i in range(0, self.num_arms):

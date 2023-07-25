@@ -148,7 +148,7 @@ def profile(function, *args):
 def performTest(probabilities, agents):
     print(probabilities)
     num_trials = 400
-    num_samples = 100
+    num_samples = 10
 
     arm_state = ArmState(probabilities)
 
@@ -196,5 +196,5 @@ if __name__ == "__main__":
     ]
 
     for probabilities in testing_probabilities:
-        agents = [bernTS(), ripple(ArmState(probabilities), limit_down=0.2718)]
+        agents = [ripple(ArmState(probabilities), limit_down=0.2718), ucb()]
         performTest(probabilities, agents)

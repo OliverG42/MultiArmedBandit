@@ -111,3 +111,12 @@ def test_intersection_finder():
     assert np.isclose(0.847, ripple_agent._findIntersection(3, 5), atol=1e-3)
     assert np.isclose(0.994, ripple_agent._findIntersection(12, 2), atol=1e-3)
     assert np.isclose(0.059, ripple_agent._findIntersection(0, 75), atol=1e-3)
+
+    assert np.isclose(0.789, ripple_agent._findIntersection(9, 10), atol=1e-3)
+    assert np.isclose(0.803, ripple_agent._findIntersection(10, 10, start_point=0.790, direction=1), atol=1e-3)
+    assert np.isclose(0.803, ripple_agent._findIntersection(10, 10), atol=1e-3)
+
+    assert np.isclose(0.797, ripple_agent._findIntersection(6, 8), atol=1e-3)
+    assert np.isclose(0.766, ripple_agent._findIntersection(6, 9, start_point=0.790, direction=-1), atol=1e-3)
+    assert np.isclose(0.766, ripple_agent._findIntersection(6, 9), atol=1e-3)
+
