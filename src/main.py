@@ -13,7 +13,7 @@ from ColourSink import ColourSink
 from experimental import ripple
 
 
-def runTrials(choosing_agent, arm_state, num_trials):
+def run_through(choosing_agent, arm_state, num_trials):
     for i in range(num_trials):
         chosen_arm = choosing_agent.chooseLever(arm_state)
         arm_state.pull_arm(chosen_arm)
@@ -27,11 +27,11 @@ def runTrials(choosing_agent, arm_state, num_trials):
     return saved_regrets
 
 
-def runSamples(choosing_agent, arm_state, num_trials, num_samples):
+def runTrials(choosing_agent, arm_state, num_trials, num_samples):
     results = []
 
     for _ in range(num_samples):
-        trial_results = runTrials(choosing_agent, arm_state, num_trials)
+        trial_results = run_through(choosing_agent, arm_state, num_trials)
 
         cumulative_results = np.cumsum(trial_results)
 
@@ -41,7 +41,7 @@ def runSamples(choosing_agent, arm_state, num_trials, num_samples):
 
 
 def runAnalysisWithoutMultiprocessing(
-    arm_state, functions=None, num_trials=100, num_samples=100
+        arm_state, functions=None, num_trials=100, num_samples=100
 ):
     if functions is None:
         raise Exception("I didn't receive arm_functions to analyse!")
@@ -49,7 +49,7 @@ def runAnalysisWithoutMultiprocessing(
     results = []
 
     for choosing_agent in functions:
-        result = runSamples(choosing_agent, arm_state, num_trials, num_samples)
+        result = runTrials(choosing_agent, arm_state, num_trials, num_samples)
         results.append((result, choosing_agent))
         print("Finished with agent", choosing_agent.name)
 
@@ -57,11 +57,11 @@ def runAnalysisWithoutMultiprocessing(
 
 
 def runSamplesHelper(args):
-    return runSamples(*args)
+    return runTrials(*args)
 
 
 def runAnalysisWithMultiprocessing(
-    arm_state, functions=None, num_trials=100, num_samples=100
+        arm_state, functions=None, num_trials=100, num_samples=100
 ):
     if functions is None:
         raise Exception("I didn't receive arm_functions to analyse!")
@@ -85,7 +85,8 @@ def plotGraph(data, num_trials):
     plt.figure(figsize=(10, 6))
 
     colour_sink = ColourSink()
-    colours = colour_sink.getColour(num_colours=len(data[1]))
+
+    colours = colour_sink.getColour(num_colours=len(data[0]))
 
     offset = 0
     for all_cumulative_regrets, choosing_agent in data:
@@ -147,13 +148,13 @@ def profile(function, *args):
 
 def performTest(probabilities, agents):
     print(probabilities)
-    num_trials = 400
-    num_samples = 10
+    time_horizon = 400
+    num_trials = 100
 
     arm_state = ArmState(probabilities)
 
     do_profile = True
-    do_multiprocessing = False
+    do_multiprocessing = True
 
     analyse_modes = [runAnalysisWithoutMultiprocessing, runAnalysisWithMultiprocessing]
 
@@ -162,18 +163,18 @@ def performTest(probabilities, agents):
             analyse_modes[do_multiprocessing],
             arm_state,
             agents,
+            time_horizon,
             num_trials,
-            num_samples,
         )
     else:
         data = analyse_modes[do_multiprocessing](
             arm_state,
             agents,
+            time_horizon,
             num_trials,
-            num_samples,
         )
 
-    plotGraph(data, num_trials)
+    plotGraph(data, time_horizon)
 
 
 if __name__ == "__main__":
@@ -196,5 +197,5 @@ if __name__ == "__main__":
     ]
 
     for probabilities in testing_probabilities:
-        agents = [ripple(ArmState(probabilities), limit_down=0.2718), ucb()]
+        agents = [ripple(ArmState(probabilities), limit_down=0.1), bernTS()]
         performTest(probabilities, agents)

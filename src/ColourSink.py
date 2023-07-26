@@ -18,7 +18,7 @@ class ColourSink:
             # Exclude boring grey colors
             and not np.allclose(mcolours.to_rgb(color)[:3], mcolours.to_rgb("grey")[:3])
             # Exclude very light colors
-            and np.array(mcolours.to_rgb(color)).min(initial=1) < 0.8
+            and np.array(mcolours.to_rgb(color)).min(initial=1) < 0.6
         ]
         self.selected_colours = []
 

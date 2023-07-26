@@ -1,4 +1,6 @@
+import decimal
 import functools
+import sys
 from copy import deepcopy
 
 import numpy as np
@@ -7,13 +9,15 @@ from matplotlib import pyplot as plt
 from Agents import Agent
 from ArmState import ArmState
 
+from decimal import Decimal, getcontext
+
 
 def plotProbSuccess(wins, losses, colour="black", identifier=None):
     if identifier is None:
         identifier = colour
 
     precision = 4
-    precision = 10**precision
+    precision = 10 ** precision
 
     plt.plot(
         [x / precision for x in range(0, precision)],
@@ -25,8 +29,47 @@ def plotProbSuccess(wins, losses, colour="black", identifier=None):
     )
 
 
+def oldBellCurve(x, wins, losses):
+    return (x ** wins) * ((1 - x) ** losses)
+
+
 def bellCurve(x, wins, losses):
-    return (x**wins) * ((1 - x) ** losses)
+    getcontext().prec = 5  # Set the precision as needed
+
+    decimal_x = Decimal(x)
+    decimal_wins = Decimal(wins)
+    decimal_losses = Decimal(losses)
+
+    # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
+    if decimal_x == 0:
+        if decimal_wins == 0:
+            first = 1
+        else:
+            first = 0
+    else:
+        first = decimal_x ** decimal_wins
+
+    # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
+    if (1 - decimal_x) == 0:
+        if decimal_losses == 0:
+            second = 1
+        else:
+            second = 0
+    else:
+        second = (1 - decimal_x) ** decimal_losses
+
+    probability = first * second
+
+    correct = oldBellCurve(x, wins, losses)
+
+    """if abs(probability - Decimal(correct)) > 5e-3:
+        print(f"{probability} is not close to {correct}")
+        print(f"{first} compared to ({x} ** {wins}) = {(x ** wins)}")
+        print(f"{second} compared to ({1 - x} ** {losses}) = {((1 - x) ** losses)}")
+        print(f"With inputs {x}, {wins} and {losses}")
+        sys.exit()"""
+
+    return probability
 
 
 def probSuccessRate(x, wins, losses):
@@ -56,26 +99,53 @@ class ripple(Agent):
     # Add a dynamic cache from functools
     @functools.lru_cache(maxsize=None)
     def _findIntersection(self, successes, failures):
-        arm_value = 1
+        upper = 1
+        lower = successes / (successes + failures) if successes + failures != 0 else 1
 
-        while arm_value >= 0:
+        accuracy = 1e-3
+
+        while upper - lower > accuracy:
+            middle = (upper + lower) / 2
+            success_rate = probSuccessRate(middle, successes, failures)
+
+            if success_rate < self.limit_down:
+                upper = middle
+            else:
+                lower = middle
+
+        return lower
+
+    @functools.lru_cache(maxsize=None)
+    def _betterFindIntersection(self, successes, failures):
+        arm_value = successes / (successes + failures) if successes + failures != 0 else 1
+
+        while arm_value < 1:
             success_rate = probSuccessRate(arm_value, successes, failures)
 
-            if success_rate > self.limit_down:
+            if success_rate < self.limit_down:
                 return arm_value
 
-            arm_value -= self.search_increment
+            arm_value += self.search_increment
 
-        return None
+        return 1
 
     def chooseLever(self, arm_state):
         # Find which intersection point(s) has changed
         for i in range(0, self.num_arms):
             if self.arm_pulls_memory[i] != arm_state.arm_pulls[i]:
                 # Change the intersection point
-                self.intersection_points[i] = self._findIntersection(
+                old = self._findIntersection(
                     arm_state.successes[i], arm_state.failures[i]
                 )
+                """new = self._betterFindIntersection(
+                    arm_state.successes[i], arm_state.failures[i]
+                )"""
+
+                """if not np.isclose(old, new, atol=1e-2):
+                    print(old, new)
+                    exit(123)"""
+
+                self.intersection_points[i] = old
 
         result = np.argmax(self.intersection_points)
 
