@@ -1,11 +1,11 @@
 \chapter{Introduction}
 \label{cha:chapter1} % (labels for cross referencing)
 
-
 %% 
 \newcommand{\N}{\mathbb{N}}
 \newcommand{\Z}{\mathbb{Z}}
 \newcommand{\R}{\mathbb{R}}
+\newcommand{\actionValueEstimate}{$\mathcal{E}$}
 
 %%
 \newcommand{\armDistribution}[1]{\mathrm{P}_{#1}}
@@ -34,13 +34,21 @@ We will consider a multi-armed bandit problem with $K$ arms and a time horizon $
 A MAB with $K$ arms with distributions $\armDistributionVect = (\armDistribution{1}, \dots , \armDistribution{K})$, such that arm $i$ has distribution $\armDistribution{k}$. Let $\armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions.
 
 
-For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. We shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy $\policy: \bigcup_{\ell \in \N}([K]\times \R)^\ell \times [0,1] \rightarrow [K]$ denotes a function for selecting actions, so that at each time step $t \in [T]$, we have $\action{t}= \policy((\action{1},\reward{1}{}),\ldots,(\action{t-1},\reward{t-1}{}),W_t)$, with $W_t$ denoting an independent random variable.
+For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. We shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy
+
+$$\policy: \bigcup_{\ell \in \N}([K]\times \R)^\ell \times [0,1] \rightarrow [K]$$ 
+
+denotes a function for selecting actions, so that at each time step $t \in [T]$, we have
+
+$$\action{t}= \policy((\action{1},\reward{1}{}),\ldots,(\action{t-1},\reward{t-1}{}),W_t)$$
+
+with $W_t$ denoting an independent random variable.
 
 
 The (random) cumulative regret for a policy $\policy$ is then defined by
-\begin{align*}
+$$
 \cumulativeRegret{T}{\policy}:=T \cdot \max_{k \in [K]} \armPopulationMean{k}-\sum_{t \in [T]}\armPopulationMean{\action{t}},
-\end{align*}
+$$
 where the actions $\action{t}$ are selected via the policy $\policy$.
 
 
@@ -63,42 +71,46 @@ The randomized algorithm for multi-armed bandits involves selecting arms at rand
 The random algorithm can be summarized as follows:
 
 \pseudobox{%
-  \KwIn{List of arms $\mathcal{A}$ with unknown probabilities $\mathcal{P}$}
+  \KwIn{List of arms $\mathcal{A}$ with unknown distributions $\armDistributionVect$}
   \KwOut{Selection strategy}
 
   \BlankLine
   \For{$t = 1,2,\ldots$}{
-    Choose a random arm $A_t = a$ uniformly from the set of arms $1,2,\ldots,K$;\newline
-    Receive the reward $R_t$ by pulling arm $a$;
+    Choose a random arm $A_t$ uniformly from the set of arms $1,2,\ldots,K$;\newline
+    Receive the reward $\reward{t}{}$ by pulling arm $A_t$;
   }
 }{Randomized Algorithm}
 
-At each time step $t$, the randomized algorithm randomly selects an arm $A_t$ from $\mathcal{A}$, following a uniform distribution:
+At each time step $t$, the randomized algorithm randomly selects an arm $A_t$ from K arms, following a uniform distribution:
 
-$$P(A_t = a) = \frac{1}{{|\mathcal{A}|}} \quad \text{for all } a \in \mathcal{A}$$
+$$\text{For } i \in \{1, 2, \ldots, K\}: P(A_t = i) = \frac{1}{K}$$
 
 This algorithm is quite often used as a baseline for more sophisticated algorithm evaluation. In the long run, the expected rewards, $R_t$, converge towards the average of the probabilities of each arm:
 
-$$lim_{{t \to \infty}} R_t = \frac{1}{|\mathcal{A}|} \sum_{{a \in \mathcal{A}}} P(A_t = a)$$
+$$lim_{{t \to \infty}} \cumulativeRegret{t}{\policy} = \frac{1}{|\mathcal{A}|} \sum_{{i=1}}^{{K}} P(A_t = i)$$
 
 Although this algorithm is very simple to implement, it doesn't attempt to optimize arm selection based on past events. It can be described as a purely exploratory algorithm that doesn't exhibit any exploitative behavior, hence its performance is generally vastly inferior to that of any other algorithms.
+
+Moreover, the value of \actionValueEstimate \space can significantly impact the algorithm's performance - in the extreme case where \actionValueEstimate=0, the algorithm will keep pulling the first arm that succeeds,preventing any further exploration.
+In a practical sense, when implementing this in code, it could explore other arms when the programming language registers the success rate as so low, it rounds down to 0.
+For example, Python will do this only when the success rate goes below $10^{-324}$\cite{python_min_float}.
 
 \subsubsection{Greedy}
 \label{sec:Greedy}
 The greedy algorithm is a step-up from randomly picking arms, since it actually takes into account past performance. Put simply, it chooses the arm that has the highest estimated expected reward, denoted by the arm with the highest current rate of success.
 
-To begin, it assigns each arm with a "action-value estimate", essentially the predicted success rate of each arm. This is often set arbitrarily at some value, usually 0.5 or 1.
+To begin, it assigns each arm with a "action-value estimate" \actionValueEstimate, essentially the predicted success rate of each arm. This is often set arbitrarily at some value, usually 0.5 or 1.
 
-Then, at each time step $t$, the greedy algorithm selects the arm $A_t$ from $\mathcal{A}$ with the highest expected success rate.
+Then, at each time step $t$, the greedy algorithm selects the arm $A_t$ with the highest expected success rate.
 
 The greedy algorithm can be summarized as follows:
 
 \pseudobox{%
-    \KwIn{List of arms $\mathcal{A}$ with unknown probabilities $\mathcal{P}$, action-value estimate $\mathcal{E}$}
+    \KwIn{List of arms $\mathcal{A}$ with unknown distributions $\armDistributionVect$, action-value estimate \actionValueEstimate}
     \KwOut{Selection strategy}
     \BlankLine
     \ForEach{arm $i = 1$ \KwTo $K$}{
-        Initialise success rate $Q_i \leftarrow \mathcal{E}$\newline
+        Initialise success rate $Q_i \leftarrow $\actionValueEstimate\newline
         Initialise number of successes $S_i \leftarrow \mathcal{0}$\newline
         Initialise count $C_i \leftarrow 0$
     }
@@ -115,15 +127,41 @@ The greedy algorithm can be summarized as follows:
 
 Although this algorithm is simple and fast, it tends to exploit the immediate best option, and very rarely explores other options to try and optimise it's rewards.
 
-It also is extremely sensitive to initial results, which significantly impacts it's performance. For example, if a 3-arm bandit has arms (0.4, 0.75, 0.8), it could get "unlucky" with reasonable probability 2\% to get rewards (1, 0, 0), which effectively locks it in to keep pulling arm 0, even though the other two arms are much better.
-
-Moreover, the value of E can significantly impact the algorithm's performance - in the extreme case where E=0, the algorithm will keep pulling the first arm that succeeds, and will only explore other arms when the programming language registers the success rate as so low, it rounds down to 0. For example, Python will do this only when the success rate goes below $10^{-324}\%$
+It also is extremely sensitive to initial results, which significantly impacts it's performance. For example, if a 3-arm bandit has arms (0.4, 0.75, 0.8), it could get unlucky with reasonable probability 2\% to get rewards (1, 0, 0), which effectively locks it in to keep pulling arm 0, even though the other two arms are much better.
 
 \subsubsection{Epsilon Greedy}
 \label{sec:EpsilonGreedy}
-Describe high-level intuition
-Pseudo-code
-Advantages and Disadvantages.
+The Epsilon Greedy algorithm is a combination of the Greedy and Randomized algorithm, addressing their tendencies to over-exploit and over-explore. It introduces a trade-off by incorporating an additional parameter $\epsilon$.
+
+The core of the Epsilon Greedy algorithm is the same action-value estimate for each arm, as described in the Greedy algorithm. However, instead of always selecting the arm with the highest estimated success rate, the Epsilon Greedy algorithm randomly explores other arms with the hope of finding potentially better options. This choice is determined by simply sampling a Bernoulli distribution based on $\epsilon$.
+
+The algorithm can be summarized as follows:
+
+\pseudobox{%
+    \KwIn{List of arms $\mathcal{A}$ with unknown distributions $\armDistributionVect$, action-value estimate \actionValueEstimate, exploration rate $\epsilon$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Initialise success rate $Q_i \leftarrow $\actionValueEstimate\newline
+        Initialise number of successes $S_i \leftarrow \mathcal{0}$\newline
+        Initialise count $C_i \leftarrow 0$
+    }
+    \BlankLine
+    \For{$t = 1,2,\ldots$}{
+        With probability $\epsilon$, choose a random arm $A_t \leftarrow$ Randomized(K)\newline
+        Otherwise, choose arm $A_t = a$ with the highest success rate: $a \leftarrow \arg\max_i Q_i$\newline
+        Receive the reward $R_t$ by pulling arm $A_t$\newline
+        Increment count: $N_{A_t} \leftarrow N_{A_t} + 1$\newline
+        Increment successes: $S_{A_t} \leftarrow S_{A_t} + R_t$\newline
+        Update success rate: $Q_{A_t} \leftarrow \frac{S_{A_t}}{N_{A_t}}$
+
+}
+}{Epsilon Greedy Algorithm}
+
+A small $\epsilon$ value results in a more greedy strategy where the algorithm primarily exploits the current best arm. Conversely, a larger $\epsilon$ value increases exploration and encourages the algorithm to try different arms more frequently.
+
+While the Epsilon Greedy algorithm can mitigate the issues of the Greedy and Randomized algorithm, it is not without its shortcomings - set the exploration rate $\epsilon$ too low, and the algorithm may get stuck in local sub-optimal arms and miss out on potentially better arms. On the other hand, too high values of $\epsilon$ means it might spend too much time exploring and not enough time exploiting the best arms, leading to, again, sub-optimal performance.
+
 
 \subsubsection{Upper Confidence Bound (UCB)}
 \label{sec:UCB}
