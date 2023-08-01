@@ -22,17 +22,6 @@
 \usepackage{setspace}
 \doublespacing
 
-% Referencing format
-\usepackage[
-	backend=biber,
-	citestyle=authoryear,
-	bibstyle=authoryear,
-	maxcitenames=2,
-	maxbibnames=99]{biblatex}
-\addbibresource{references.bib}
-\DeclareNameAlias{sortname}{family-given}
-\setlength\bibitemsep{1em}
-
 % Code listings
 \usepackage{listings}
 \usepackage{xcolor}
@@ -95,19 +84,3 @@
     \pagenumbering{roman}
     \setcounter{page}{0}
 }
-
-% Theorem environment things
-\newtheorem{theorem}{Theorem}[chapter]
-\newtheorem{definition}{Definition}[chapter]
-\newtheorem{corollary}{Corollary}[theorem]
-\newtheorem{lemma}[theorem]{Lemma}
-
-\newtheoremstyle{break}%
-    {}{}%
-    {}{}%
-    {\bfseries}{}% Note that final punctuation is omitted.
-    {\newline}{}
-\theoremstyle{break}
-\newtheorem{example}{Example}[chapter]
-
-\endinput

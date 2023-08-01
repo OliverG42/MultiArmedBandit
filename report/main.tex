@@ -2,6 +2,7 @@
 
 \usepackage{projectreport}
 \usepackage{xifthen}
+
 \linespread{1.5}
 
 \newcommand{\name}{Oliver Gay}
@@ -24,8 +25,7 @@
 \include{chapter1}
 \include{chapter2} 
 
-\addcontentsline{toc}{chapter}{References}
-\renewcommand\bibname{References}
-\printbibliography
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
 
 \end{document}
