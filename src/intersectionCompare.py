@@ -37,13 +37,14 @@ def V2(successes, failures):
     upper = 1
     lower = successes / (successes + failures) if successes + failures != 0 else 1
 
-    accuracy = 1e-3
+    global prob_calls
+
+    accuracy = 1e-2
 
     while upper - lower > accuracy:
         middle = (upper + lower) / 2
         success_rate = probSuccessRate(middle, successes, failures)
 
-        global prob_calls
         prob_calls += 1
 
         if success_rate < limit_down:
@@ -82,6 +83,7 @@ if __name__ == "__main__":
 
             prob_calls = 0
 
+
             def perform_suite():
                 outcomes = []
                 for (successes, failures) in suite.values:
@@ -93,21 +95,24 @@ if __name__ == "__main__":
 
             results.append(perform_suite())
 
-            print(f"Time for {function.__name__} in '{suite.name}': {execution_time:.5f}s. Called probSuccessRate {prob_calls} times")
+            print(
+                f"Time for {function.__name__} in '{suite.name}': {execution_time:.5f}s. Called probSuccessRate {prob_calls} times")
 
         # Define the tolerance (atol) for the closeness comparison
         tolerance = 1e-2
 
         # Check if elements are not close
-        not_close_mask = ~np.isclose(results[0], results[1], atol=tolerance)
+        reference_result = results[0]
+        not_close_mask = np.any([~np.isclose(reference_result, result, atol=tolerance) for result in results],
+                                axis=0)
         not_close_indices = np.where(not_close_mask)[0]
 
         if not not_close_indices.size:
-            # Yay!
             pass
         else:
-            print("Warning - functions are giving too different answers!")
+            print("Warning - functions are giving different answers!")
             for index in not_close_indices:
-                print(f"{results[0][index]} is not close enough to {results[1][index]}")
+                for i, result in enumerate(results):
+                    print(f"{result[index]} is not close enough to {reference_result[index]}")
 
             sys.exit()

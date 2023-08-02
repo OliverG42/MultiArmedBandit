@@ -3,7 +3,7 @@ import random
 from ArmState import ArmState
 import numpy as np
 
-from experimental import ripple
+from experimental import Ripple
 
 
 def test_interactions():
@@ -106,7 +106,7 @@ def test_brute_force():
 def test_intersection_finder():
     # Only used for getting access to the _findIntersection function
     arm_state = ArmState([0])
-    ripple_agent = ripple(arm_state)
+    ripple_agent = Ripple(arm_state)
     # -------------------------------------------------------------#
     assert np.isclose(0.847, ripple_agent._findIntersection(3, 5), atol=1e-3)
     assert np.isclose(0.994, ripple_agent._findIntersection(12, 2), atol=1e-3)

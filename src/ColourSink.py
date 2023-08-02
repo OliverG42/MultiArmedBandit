@@ -1,10 +1,9 @@
 import math
 import random
-from itertools import tee
 
-import numpy as np
 import matplotlib.colors as mcolours
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Is this class overkill? Absolutely yes!

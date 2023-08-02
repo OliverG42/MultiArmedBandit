@@ -27,7 +27,7 @@ class Agent:
 
 # TODO Add "burn-in" time
 # TODO Try each arm x times, then switch to greedy
-class bernGreedy(Agent):
+class BernGreedy(Agent):
     def __init__(self, num_levers, burn_time=10):
         super().__init__()
         self._initialize()
@@ -44,15 +44,15 @@ class bernGreedy(Agent):
             return np.argmax(arm_state.success_rates)
 
 
-class bernTS(Agent):
-    def chooseLever(self, arm_state, alphaPrior=1, betaPrior=1):
+class BernTS(Agent):
+    def chooseLever(self, arm_state, alpha_prior=1, beta_prior=1):
         samples = np.random.beta(
-            arm_state.successes + alphaPrior, arm_state.failures + betaPrior
+            arm_state.successes + alpha_prior, arm_state.failures + beta_prior
         )
         return np.argmax(samples)
 
 
-class epsilonGreedy(Agent):
+class EpsilonGreedy(Agent):
     def __init__(self, epsilon=0.95):
         super().__init__()
         self._initialize()
@@ -73,12 +73,12 @@ class epsilonGreedy(Agent):
         return chosen_arm
 
 
-class completelyRandom(Agent):
+class CompletelyRandom(Agent):
     def chooseLever(self, arm_state):
         return randint(0, arm_state.num_arms - 1)
 
 
-class ucb(Agent):
+class Ucb(Agent):
     def chooseLever(self, arm_state):
         confidence_bounds = arm_state.success_rates + np.sqrt(
             (2 * np.log(np.sum(arm_state.total_pulls + 1)))
@@ -90,7 +90,7 @@ class ucb(Agent):
 
 #               Temperature
 # Exploitation <-----------> Exploration
-class softmax(Agent):
+class Softmax(Agent):
     def __init__(self, temperature=0.1):
         super().__init__()
         self._initialize()

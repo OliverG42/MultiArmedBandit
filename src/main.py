@@ -1,16 +1,15 @@
 import cProfile
-import math
 import pstats
 import random
+from multiprocessing import Pool
+
+from Agents import *
+from experimental import Ripple
+from ArmState import ArmState
+from ColourSink import ColourSink
 
 import matplotlib.pyplot as plt
 import numpy as np
-from multiprocessing import Pool
-
-from Agents import bernTS, epsilonGreedy, ucb, softmax, bernGreedy, completelyRandom
-from ArmState import ArmState
-from ColourSink import ColourSink
-from experimental import ripple
 
 
 def run_through(choosing_agent, arm_state, num_trials):
@@ -61,23 +60,23 @@ def runSamplesHelper(args):
 
 
 def runAnalysisWithMultiprocessing(
-        arm_state, functions=None, num_trials=100, num_samples=100
+        arm_state, agents=None, time_horizon=100, num_trials=100
 ):
-    if functions is None:
-        raise Exception("I didn't receive arm_functions to analyse!")
+    if agents is None:
+        raise Exception("I didn't receive any agents to analyse!")
 
     pool = Pool()
 
     inputs = [
-        (choosing_agent, arm_state, num_trials, num_samples)
-        for choosing_agent in functions
+        (choosing_agent, arm_state, time_horizon, num_trials)
+        for choosing_agent in agents
     ]
     results = pool.map(runSamplesHelper, inputs)
 
     pool.close()
     pool.join()
 
-    return list(zip(results, functions))
+    return list(zip(results, agents))
 
 
 def plotGraph(data, num_trials):
@@ -86,7 +85,7 @@ def plotGraph(data, num_trials):
 
     colour_sink = ColourSink()
 
-    colours = colour_sink.getColour(num_colours=len(data[0]))
+    colours = colour_sink.getColour(num_colours=len(data))
 
     offset = 0
     for all_cumulative_regrets, choosing_agent in data:
@@ -179,6 +178,8 @@ def performTest(probabilities, agents):
 
 if __name__ == "__main__":
     testing_probabilities = [
+        # "Classic" example
+        [0.1, 0.15, 0.2, 0.25, 0.1, 0.15, 0.2, 0.25, 0.9],
         # Very low probabilities
         [float("{:.3f}".format(random.uniform(0, 0.1))) for _ in range(5)],
         # Very high probabilities
@@ -187,7 +188,7 @@ if __name__ == "__main__":
         [float("{:.3f}".format(random.uniform(0.3, 0.7))) for _ in range(5)],
         # A complete mess of probabilities
         [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(5)],
-        # A duel between Europe and American roulette red/black
+        # Europe and American roulette red/black
         [0.4865, 0.4737],
         # Overloading with way too many options
         [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(50)],
@@ -197,5 +198,5 @@ if __name__ == "__main__":
     ]
 
     for probabilities in testing_probabilities:
-        agents = [ripple(ArmState(probabilities), limit_down=0.1), bernTS()]
+        agents = [Ripple(ArmState(probabilities), limit_down=0.05), Ucb(), BernTS()]
         performTest(probabilities, agents)

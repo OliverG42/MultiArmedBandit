@@ -1,15 +1,12 @@
-import decimal
 import functools
-import sys
 from copy import deepcopy
+from decimal import Decimal, getcontext
 
 import numpy as np
 from matplotlib import pyplot as plt
 
 from Agents import Agent
 from ArmState import ArmState
-
-from decimal import Decimal, getcontext
 
 
 def plotProbSuccess(wins, losses, colour="black", identifier=None):
@@ -60,9 +57,9 @@ def bellCurve(x, wins, losses):
 
     probability = first * second
 
-    correct = oldBellCurve(x, wins, losses)
+    """correct = oldBellCurve(x, wins, losses)
 
-    """if abs(probability - Decimal(correct)) > 5e-3:
+    if abs(probability - Decimal(correct)) > 5e-3:
         print(f"{probability} is not close to {correct}")
         print(f"{first} compared to ({x} ** {wins}) = {(x ** wins)}")
         print(f"{second} compared to ({1 - x} ** {losses}) = {((1 - x) ** losses)}")
@@ -76,10 +73,10 @@ def probSuccessRate(x, wins, losses):
     most_probable = wins / (wins + losses) if wins + losses != 0 else 1
 
     # Normalise the result
-    return bellCurve(x, wins, losses) / bellCurve(most_probable, wins, losses)
+    return float(bellCurve(x, wins, losses) / bellCurve(most_probable, wins, losses))
 
 
-class ripple(Agent):
+class Ripple(Agent):
     def __init__(self, arm_state, limit_down=0.01):
         super().__init__()
         self._initialize()
@@ -102,7 +99,7 @@ class ripple(Agent):
         upper = 1
         lower = successes / (successes + failures) if successes + failures != 0 else 1
 
-        accuracy = 1e-3
+        accuracy = 1e-2
 
         while upper - lower > accuracy:
             middle = (upper + lower) / 2
@@ -174,7 +171,7 @@ if __name__ == "__main__":
     arm_state.failures = [10, 5, 10]
     arm_state.success_rates = [0.5, 0.6, 0.4]
 
-    rippleAgent = ripple(arm_state)
+    rippleAgent = Ripple(arm_state)
     choice = rippleAgent.chooseLever(arm_state)
     print(choice)
     assert choice == 1
