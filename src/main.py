@@ -1,19 +1,20 @@
 import cProfile
+import multiprocessing
 import pstats
 import random
-from multiprocessing import Pool
-
-from Agents import *
-from experimental import Ripple
-from ArmState import ArmState
-from ColourSink import ColourSink
 
 import matplotlib.pyplot as plt
-import numpy as np
+import dask.bag as db
+from dask.distributed import Client
+
+from Agents import *
+from ArmState import ArmState
+from ColourSink import ColourSink
+from experimental import Ripple
 
 
-def run_through(choosing_agent, arm_state, num_trials):
-    for i in range(num_trials):
+def run_through(choosing_agent, arm_state, time_horizon):
+    for i in range(time_horizon):
         chosen_arm = choosing_agent.chooseLever(arm_state)
         arm_state.pull_arm(chosen_arm)
 
@@ -26,11 +27,11 @@ def run_through(choosing_agent, arm_state, num_trials):
     return saved_regrets
 
 
-def runTrials(choosing_agent, arm_state, num_trials, num_samples):
+def runTrials(choosing_agent, arm_state, time_horizon, num_trials):
     results = []
 
-    for _ in range(num_samples):
-        trial_results = run_through(choosing_agent, arm_state, num_trials)
+    for _ in range(num_trials):
+        trial_results = run_through(choosing_agent, arm_state, time_horizon)
 
         cumulative_results = np.cumsum(trial_results)
 
@@ -40,11 +41,8 @@ def runTrials(choosing_agent, arm_state, num_trials, num_samples):
 
 
 def runAnalysisWithoutMultiprocessing(
-        arm_state, functions=None, num_trials=100, num_samples=100
+        arm_state, functions, num_trials, num_samples
 ):
-    if functions is None:
-        raise Exception("I didn't receive arm_functions to analyse!")
-
     results = []
 
     for choosing_agent in functions:
@@ -60,17 +58,15 @@ def runSamplesHelper(args):
 
 
 def runAnalysisWithMultiprocessing(
-        arm_state, agents=None, time_horizon=100, num_trials=100
+        arm_state, agents, time_horizon, num_trials
 ):
-    if agents is None:
-        raise Exception("I didn't receive any agents to analyse!")
-
-    pool = Pool()
+    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
 
     inputs = [
         (choosing_agent, arm_state, time_horizon, num_trials)
         for choosing_agent in agents
     ]
+
     results = pool.map(runSamplesHelper, inputs)
 
     pool.close()
@@ -153,20 +149,20 @@ def performTest(probabilities, agents):
     arm_state = ArmState(probabilities)
 
     do_profile = True
-    do_multiprocessing = True
+    multiprocessing_mode = 1
 
     analyse_modes = [runAnalysisWithoutMultiprocessing, runAnalysisWithMultiprocessing]
 
     if do_profile:
         data = profile(
-            analyse_modes[do_multiprocessing],
+            analyse_modes[multiprocessing_mode],
             arm_state,
             agents,
             time_horizon,
             num_trials,
         )
     else:
-        data = analyse_modes[do_multiprocessing](
+        data = analyse_modes[multiprocessing_mode](
             arm_state,
             agents,
             time_horizon,
@@ -198,5 +194,9 @@ if __name__ == "__main__":
     ]
 
     for probabilities in testing_probabilities:
-        agents = [Ripple(ArmState(probabilities), limit_down=0.05), Ucb(), BernTS()]
+        agents = [
+            Ripple(ArmState(probabilities), limit_down=0.05),
+            Ucb(),
+            # BernTS(),
+        ]
         performTest(probabilities, agents)
