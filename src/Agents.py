@@ -19,6 +19,7 @@ class Agent:
 
     def reset(self):
         if self._initialized:
+            # noinspection PyArgumentList
             self.__init__(*self._init_args, **self._init_kwargs)
 
     def _initialize(self):

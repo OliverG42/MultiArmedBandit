@@ -9,7 +9,7 @@ from Agents import Agent
 from ArmState import ArmState
 
 
-def plotProbSuccess(wins, losses, colour="black", identifier=None):
+def plotProbSuccess(wins, losses, colour, identifier=None):
     if identifier is None:
         identifier = colour
 
@@ -77,21 +77,21 @@ def probSuccessRate(x, wins, losses):
 
 
 class Ripple(Agent):
-    def __init__(self, arm_state, limit_down=0.01):
+    def __init__(self, the_arm_state, limit_down=0.01):
         super().__init__()
         self._initialize()
         self.name = self.name + " " + str(limit_down)
-        self.num_arms = arm_state.num_arms
+        self.num_arms = the_arm_state.num_arms
         self.limit_down = limit_down
         self.search_increment = 0.001
 
         self.intersection_points = [
             self._findIntersection(
-                deepcopy(arm_state.successes[i]), deepcopy(arm_state.failures[i])
+                deepcopy(the_arm_state.successes[i]), deepcopy(the_arm_state.failures[i])
             )
             for i in range(0, self.num_arms)
         ]
-        self.arm_pulls_memory = deepcopy(arm_state.arm_pulls)
+        self.arm_pulls_memory = deepcopy(the_arm_state.arm_pulls)
 
     # Add a dynamic cache from functools
     @functools.lru_cache(maxsize=None)
@@ -112,37 +112,14 @@ class Ripple(Agent):
 
         return lower
 
-    @functools.lru_cache(maxsize=None)
-    def _betterFindIntersection(self, successes, failures):
-        arm_value = successes / (successes + failures) if successes + failures != 0 else 1
-
-        while arm_value < 1:
-            success_rate = probSuccessRate(arm_value, successes, failures)
-
-            if success_rate < self.limit_down:
-                return arm_value
-
-            arm_value += self.search_increment
-
-        return 1
-
-    def chooseLever(self, arm_state):
+    def chooseLever(self, the_arm_state):
         # Find which intersection point(s) has changed
         for i in range(0, self.num_arms):
-            if self.arm_pulls_memory[i] != arm_state.arm_pulls[i]:
+            if self.arm_pulls_memory[i] != the_arm_state.arm_pulls[i]:
                 # Change the intersection point
-                old = self._findIntersection(
-                    arm_state.successes[i], arm_state.failures[i]
+                self.intersection_points[i] = self._findIntersection(
+                    the_arm_state.successes[i], the_arm_state.failures[i]
                 )
-                """new = self._betterFindIntersection(
-                    arm_state.successes[i], arm_state.failures[i]
-                )"""
-
-                """if not np.isclose(old, new, atol=1e-2):
-                    print(old, new)
-                    exit(123)"""
-
-                self.intersection_points[i] = old
 
         result = np.argmax(self.intersection_points)
 
