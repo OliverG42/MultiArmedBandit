@@ -3,7 +3,7 @@ import timeit
 
 import numpy as np
 
-from src.experimental import probSuccessRate
+from src.experimental import prob_success_rate
 
 limit_down = 0.1
 
@@ -12,13 +12,13 @@ global prob_calls
 
 # @functools.lru_cache(maxsize=None)
 # No caching allowed!
-def V1(successes, failures):
+def v1(successes, failures):
     accuracy = 1e-3
 
     arm_value = 1
 
     while arm_value >= 0 and successes + failures != 0:
-        success_rate = probSuccessRate(arm_value, successes, failures)
+        success_rate = prob_success_rate(arm_value, successes, failures)
 
         global prob_calls
         prob_calls += 1
@@ -33,7 +33,7 @@ def V1(successes, failures):
 
 # @functools.lru_cache(maxsize=None)
 # No caching allowed!
-def V2(successes, failures):
+def v2(successes, failures):
     upper = 1
     lower = successes / (successes + failures) if successes + failures != 0 else 1
 
@@ -43,7 +43,7 @@ def V2(successes, failures):
 
     while upper - lower > accuracy:
         middle = (upper + lower) / 2
-        success_rate = probSuccessRate(middle, successes, failures)
+        success_rate = prob_success_rate(middle, successes, failures)
 
         prob_calls += 1
 
@@ -63,7 +63,7 @@ class Suite:
 
 if __name__ == "__main__":
 
-    functions = [V1, V2]
+    functions = [v1, v2]
 
     suites = [
         Suite("First few pulls", 0, 10),
@@ -107,9 +107,7 @@ if __name__ == "__main__":
                                 axis=0)
         not_close_indices = np.where(not_close_mask)[0]
 
-        if not not_close_indices.size:
-            pass
-        else:
+        if not_close_indices.size:
             print("Warning - functions are giving different answers!")
             for index in not_close_indices:
                 for i, result in enumerate(results):

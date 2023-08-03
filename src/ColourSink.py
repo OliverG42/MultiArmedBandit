@@ -21,7 +21,7 @@ class ColourSink:
         ]
         self.selected_colours = []
 
-    def getColour(self, num_colours=1):
+    def get_colour(self, num_colours=1):
         if len(self.all_colours) < num_colours:
             print("Insufficient colours available.")
             return None
@@ -61,12 +61,12 @@ class ColourSink:
 
         return min(distances) if distances else math.inf
 
-    def displayColours(self):
+    def display_colours(self):
         n_colours = len(self.selected_colours)
         colour_indices = np.arange(n_colours)
         bar_width = 0.8
 
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         rects = ax.bar(
             colour_indices,
             [1] * n_colours,
@@ -102,7 +102,7 @@ class ColourSink:
 if __name__ == "__main__":
     colour_sink = ColourSink()
 
-    dissimilar_colours = colour_sink.getColour(num_colours=9)
+    dissimilar_colours = colour_sink.get_colour(num_colours=9)
     print(dissimilar_colours)
 
-    colour_sink.displayColours()
+    colour_sink.display_colours()

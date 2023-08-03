@@ -1,26 +1,26 @@
 import cProfile
 import pstats
 
-import numpy as np
+from numpy import mean, std
 from matplotlib import pyplot as plt
 
 from src.ColourSink import ColourSink
 
 
-def plotGraph(data, num_trials):
+def plot_graph(data, num_trials):
     error_bar_interval = int(num_trials / 10)
     plt.figure(figsize=(10, 6))
 
     colour_sink = ColourSink()
 
-    colours = colour_sink.getColour(num_colours=len(data))
+    colours = colour_sink.get_colour(num_colours=len(data))
 
     offset = 0
     for all_cumulative_regrets, choosing_agent in data:
         colour = colours.pop(0)
 
-        avg_cumulative_regrets = np.mean(all_cumulative_regrets, axis=0)
-        std_cumulative_regrets = np.std(all_cumulative_regrets, axis=0)
+        avg_cumulative_regrets = mean(all_cumulative_regrets, axis=0)
+        std_cumulative_regrets = std(all_cumulative_regrets, axis=0)
 
         # Plot the smooth curve of average cumulative regrets with error bars
         plt.plot(

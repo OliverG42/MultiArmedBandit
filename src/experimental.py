@@ -9,7 +9,7 @@ from Agents import Agent
 from ArmState import ArmState
 
 
-def plotProbSuccess(wins, losses, colour, identifier=None):
+def plot_prob_success(wins, losses, colour, identifier=None):
     if identifier is None:
         identifier = colour
 
@@ -18,7 +18,7 @@ def plotProbSuccess(wins, losses, colour, identifier=None):
 
     plt.plot(
         [x / precision for x in range(0, precision)],
-        [probSuccessRate(x / precision, wins, losses) for x in range(0, precision)],
+        [prob_success_rate(x / precision, wins, losses) for x in range(0, precision)],
         label=identifier,
         linewidth=1.5,
         color=colour,
@@ -26,11 +26,11 @@ def plotProbSuccess(wins, losses, colour, identifier=None):
     )
 
 
-def oldBellCurve(x, wins, losses):
+def old_bell_curve(x, wins, losses):
     return (x ** wins) * ((1 - x) ** losses)
 
 
-def bellCurve(x, wins, losses):
+def bell_curve(x, wins, losses):
     getcontext().prec = 5  # Set the precision as needed
 
     decimal_x = Decimal(x)
@@ -69,11 +69,11 @@ def bellCurve(x, wins, losses):
     return probability
 
 
-def probSuccessRate(x, wins, losses):
+def prob_success_rate(x, wins, losses):
     most_probable = wins / (wins + losses) if wins + losses != 0 else 1
 
     # Normalise the result
-    return float(bellCurve(x, wins, losses) / bellCurve(most_probable, wins, losses))
+    return float(bell_curve(x, wins, losses) / bell_curve(most_probable, wins, losses))
 
 
 class Ripple(Agent):
@@ -103,7 +103,7 @@ class Ripple(Agent):
 
         while upper - lower > accuracy:
             middle = (upper + lower) / 2
-            success_rate = probSuccessRate(middle, successes, failures)
+            success_rate = prob_success_rate(middle, successes, failures)
 
             if success_rate < self.limit_down:
                 upper = middle
@@ -112,7 +112,7 @@ class Ripple(Agent):
 
         return lower
 
-    def chooseLever(self, the_arm_state):
+    def choose_lever(self, the_arm_state):
         # Find which intersection point(s) has changed
         for i in range(0, self.num_arms):
             if self.arm_pulls_memory[i] != the_arm_state.arm_pulls[i]:
@@ -126,7 +126,7 @@ class Ripple(Agent):
         return result
 
 
-def doGraph(wins, losses):
+def do_graph(wins, losses):
     plt.figure(figsize=(10, 6))
     plt.xlabel("Chance of Success - p")
     plt.subplots_adjust(left=0.2)
@@ -135,7 +135,7 @@ def doGraph(wins, losses):
     colours = ["red", "yellow", "green"]
 
     for win, loss, colour in zip(wins, losses, colours):
-        plotProbSuccess(win, loss, colour=colour, identifier=colours.index(colour))
+        plot_prob_success(win, loss, colour=colour, identifier=colours.index(colour))
 
     plt.legend()
 
@@ -149,8 +149,8 @@ if __name__ == "__main__":
     arm_state.success_rates = [0.5, 0.6, 0.4]
 
     rippleAgent = Ripple(arm_state)
-    choice = rippleAgent.chooseLever(arm_state)
+    choice = rippleAgent.choose_lever(arm_state)
     print(choice)
     assert choice == 1
 
-    doGraph(arm_state.successes, arm_state.failures)
+    do_graph(arm_state.successes, arm_state.failures)

@@ -7,7 +7,7 @@ from pathos.multiprocessing import ProcessingPool as PathosProcessingPool
 
 
 # A very simple function (so my computer doesn't explode when trying to benchmark these)
-def weirdFunction(args):
+def weird_function(args):
     x, y = args
     return x + y
 
@@ -56,5 +56,5 @@ if __name__ == "__main__":
     pool_methods = ["map", "starmap", "apply", "imap", "imap_unordered", "pathos", "dask_1", "dask_2"]
 
     for method in pool_methods:
-        result, elapsed_time = process_with_pool(method, size, weirdFunction)
+        result, elapsed_time = process_with_pool(method, size, weird_function)
         print(f"Time taken for pool.{method}: {elapsed_time} seconds")
