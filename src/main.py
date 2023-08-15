@@ -5,7 +5,7 @@ from numpy import cumsum
 
 import Agents
 from ArmState import ArmState
-from experimental import Ripple
+from experimental import Ripple, Rag, Cliff
 import utils
 
 
@@ -71,10 +71,8 @@ def run_analysis_with_multiprocessing(
     return list(zip(results, agents_list))
 
 
-def perform_test(probabilities_list, agents_list):
+def perform_test(probabilities_list, agents_list, time_horizon, num_trials):
     print(probabilities_list)
-    time_horizon = 400
-    num_trials = 200
 
     arm_state = ArmState(probabilities_list)
 
@@ -114,7 +112,7 @@ if __name__ == "__main__":
         [float("{:.3f}".format(random.uniform(0.3, 0.7))) for _ in range(5)],
         # A complete mess of probabilities
         [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(5)],
-        # Europe and American roulette red/black
+        # European and American roulette chances of winning for red/black
         [0.4865, 0.4737],
         # Overloading with way too many options
         [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(50)],
@@ -123,11 +121,14 @@ if __name__ == "__main__":
         [1 / 15300, 1 / 649739, 1 / 11500],
     ]
 
+    time_horizon = 400
+    num_trials = 100
+
     for probabilities in testing_probabilities:
         agents = [
+            Cliff(takeover=0.5),
             Ripple(ArmState(probabilities), limit_down=0.05),
-            Agents.Ucb(),
-            # BernTS(),
+            #Agents.Ucb(),
+            Agents.BernTS(),
         ]
-        perform_test(probabilities, agents)
-        sys.exit()
+        perform_test(probabilities, agents, time_horizon, num_trials)

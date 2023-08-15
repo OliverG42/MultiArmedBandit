@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 from Agents import Agent
 from ArmState import ArmState
+from src.utils import lazy_integration
 
 
 def plot_prob_success(wins, losses, colour, identifier=None):
@@ -26,12 +27,10 @@ def plot_prob_success(wins, losses, colour, identifier=None):
     )
 
 
-def old_bell_curve(x, wins, losses):
-    return (x ** wins) * ((1 - x) ** losses)
-
-
+# Essentially doing (x ** wins) * ((1 - x) ** losses), but avoiding errors and very small number rounding
 def bell_curve(x, wins, losses):
-    getcontext().prec = 5  # Set the precision as needed
+    # Set the precision of Decimal
+    getcontext().prec = 5
 
     decimal_x = Decimal(x)
     decimal_wins = Decimal(wins)
@@ -55,25 +54,21 @@ def bell_curve(x, wins, losses):
     else:
         second = (1 - decimal_x) ** decimal_losses
 
-    probability = first * second
+    return float(first * second)
 
-    """correct = oldBellCurve(x, wins, losses)
 
-    if abs(probability - Decimal(correct)) > 5e-3:
-        print(f"{probability} is not close to {correct}")
-        print(f"{first} compared to ({x} ** {wins}) = {(x ** wins)}")
-        print(f"{second} compared to ({1 - x} ** {losses}) = {((1 - x) ** losses)}")
-        print(f"With inputs {x}, {wins} and {losses}")
-        sys.exit()"""
+def bell_curve_vectorized(x, wins, losses):
+    first = np.where(x == 0, np.where(wins == 0, 1, 0), x ** wins)
+    second = np.where((1 - x) == 0, np.where(losses == 0, 1, 0), (1 - x) ** losses)
 
-    return probability
+    return first * second
 
 
 def prob_success_rate(x, wins, losses):
     most_probable = wins / (wins + losses) if wins + losses != 0 else 1
 
     # Normalise the result
-    return float(bell_curve(x, wins, losses) / bell_curve(most_probable, wins, losses))
+    return bell_curve(x, wins, losses) / bell_curve(most_probable, wins, losses)
 
 
 class Ripple(Agent):
@@ -122,6 +117,50 @@ class Ripple(Agent):
                 )
 
         result = np.argmax(self.intersection_points)
+
+        return result
+
+
+# Stands for Really Accurate Gambler
+class Rag(Agent):
+    def __init__(self):
+        super().__init__()
+        self._initialize()
+
+    # Add a dynamic cache from functools
+    @functools.lru_cache(maxsize=None)
+    def expectedRewards(self, successes, failures):
+        normalisation_factor = 1 / lazy_integration(bell_curve_vectorized, successes, failures)
+        x_values = np.arange(0, 1.001, 0.001)
+        integrand = x_values * bell_curve_vectorized(x_values, successes, failures) * normalisation_factor
+        result = np.trapz(integrand, dx=0.001)
+        return result
+
+    def choose_lever(self, the_arm_state):
+        expectedNormalisedRewards = np.array(
+            [self.expectedRewards(s, f) for (s, f) in zip(the_arm_state.successes, the_arm_state.failures)])
+        result = np.argmax(expectedNormalisedRewards)
+
+        return result
+
+
+class Cliff(Agent):
+    def __init__(self, takeover):
+        super().__init__()
+        self._initialize()
+        self.takeover = takeover
+
+    def choose_lever(self, the_arm_state):
+        greedy_arm = np.argmax(the_arm_state.success_rates)
+        greedy_success_rate = the_arm_state.success_rates[greedy_arm]
+        result = greedy_arm
+
+        for arm_index, (successes, failures) in enumerate(zip(the_arm_state.successes, the_arm_state.failures)):
+            if arm_index == greedy_arm:
+                continue
+
+            if prob_success_rate(greedy_success_rate, successes, failures) > self.takeover:
+                result = arm_index
 
         return result
 

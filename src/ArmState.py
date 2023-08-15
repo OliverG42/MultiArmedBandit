@@ -3,8 +3,10 @@ import numpy as np
 
 class ArmState:
     def __init__(self, reward_probs):
-        self.reward_probs = reward_probs
-        self.max_prob = np.max(reward_probs)
+        # Private variables
+        self._reward_probs = reward_probs
+        self._max_prob = np.max(reward_probs)
+
         self.num_arms = len(reward_probs)
         self.successes = np.zeros(self.num_arms)
         self.failures = np.zeros(self.num_arms)
@@ -15,7 +17,7 @@ class ArmState:
 
     def pull_arm(self, arm_number, force_result=None):
         if force_result is None:
-            outcome = np.random.binomial(1, self.reward_probs[arm_number])
+            outcome = np.random.binomial(1, self._reward_probs[arm_number])
         else:
             outcome = force_result
 
@@ -33,7 +35,7 @@ class ArmState:
         )
 
         # Update regret
-        self.regrets.append(self.max_prob - self.reward_probs[arm_number])
+        self.regrets.append(self._max_prob - self._reward_probs[arm_number])
 
     def reset(self):
-        self.__init__(self.reward_probs)
+        self.__init__(self._reward_probs)

@@ -2,6 +2,7 @@ import cProfile
 import pstats
 
 from numpy import mean, std
+import numpy as np
 from matplotlib import pyplot as plt
 
 from src.ColourSink import ColourSink
@@ -71,3 +72,9 @@ def profile(function, *args):
     print("Time taken: " + str(round(stats.total_tt, 3)) + "s")
 
     return outcome
+
+
+def lazy_integration(function, *args, step_size=0.001):
+    x_values = np.arange(0, 1 + step_size, step_size)
+    result = np.sum(function(x_values, *args)) * step_size
+    return result

@@ -15,8 +15,8 @@ def test_interactions():
     assert arm_state.total_pulls == 0
     assert arm_state.regrets == []
     assert arm_state.num_arms == 3
-    assert arm_state.reward_probs == [0.2, 0.4, 0.5]
-    assert arm_state.max_prob == 0.5
+    assert arm_state._reward_probs == [0.2, 0.4, 0.5]
+    assert arm_state._max_prob == 0.5
 
     arm_state.pull_arm(0, force_result=True)
     assert np.all(arm_state.success_rates == np.array([1, 1, 1]))

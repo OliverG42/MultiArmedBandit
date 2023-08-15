@@ -52,8 +52,8 @@ def process_with_pool(pool_method, the_size, func):
 
 
 if __name__ == "__main__":
-    size = 100
-    pool_methods = ["map", "starmap", "apply", "imap", "imap_unordered", "pathos", "dask_1", "dask_2"]
+    size = 400
+    pool_methods = ["map", "starmap", "apply", "imap", "imap_unordered", "pathos", "dask_1"]
 
     for method in pool_methods:
         result, elapsed_time = process_with_pool(method, size, weird_function)
