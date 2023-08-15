@@ -5,11 +5,25 @@
 \newcommand{\N}{\mathbb{N}}
 \newcommand{\Z}{\mathbb{Z}}
 \newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+
+
 \newcommand{\actionValueEstimate}{$\mathcal{E}$}
+\newcommand{\epsilonFunction}{$\varepsilon(t)$}
+
+
+
+
 
 %%
+
+\newcommand{\numArms}{K}
+\newcommand{\armsList}{A}
+\newcommand{\timeHorizon}{T}
 \newcommand{\armDistribution}[1]{\mathrm{P}_{#1}}
 \newcommand{\armPopulationMean}[1]{\mu_{#1}}
+\newcommand{\maxPopulationMean}{\armPopulationMean{\star}}
 \newcommand{\armDistributionVect}{\mathrm{P}}
 
 \newcommand{\action}[1]{A_{#1}}
@@ -71,7 +85,7 @@ The randomized algorithm for multi-armed bandits involves selecting arms at rand
 The random algorithm can be summarized as follows:
 
 \pseudobox{%
-  \KwIn{List of arms $\mathcal{A}$ with unknown distributions $\armDistributionVect$}
+  \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$}
   \KwOut{Selection strategy}
 
   \BlankLine
@@ -83,17 +97,17 @@ The random algorithm can be summarized as follows:
 
 At each time step $t$, the randomized algorithm randomly selects an arm $A_t$ from K arms, following a uniform distribution:
 
-$$\text{For } i \in \{1, 2, \ldots, K\}: P(A_t = i) = \frac{1}{K}$$
+$$\text{For } i \in \{1, 2, \ldots, K\}: \Prob(A_t = i) = \frac{1}{K}$$
 
-This algorithm is quite often used as a baseline for more sophisticated algorithm evaluation. In the long run, the expected rewards, $R_t$, converge towards the average of the probabilities of each arm:
+This algorithm is quite often used as a baseline for more sophisticated algorithm evaluation. In the long run, the average reward converges towards the discrepancy between the maximum and the average reward. More precisely, by the strong law of large numbers the following holds almost surely,
 
-$$lim_{{t \to \infty}} \cumulativeRegret{t}{\policy} = \frac{1}{|\mathcal{A}|} \sum_{{i=1}}^{{K}} P(A_t = i)$$
+$$\lim_{{t \to \infty}} \frac{1}{t}\cdot \cumulativeRegret{t}{\policy} = \maxPopulationMean-\frac{1}{\numArms} \sum_{{k=1}}^{\numArms} \armPopulationMean{k}.$$
 
 Although this algorithm is very simple to implement, it doesn't attempt to optimize arm selection based on past events. It can be described as a purely exploratory algorithm that doesn't exhibit any exploitative behavior, hence its performance is generally vastly inferior to that of any other algorithms.
 
 Moreover, the value of \actionValueEstimate \space can significantly impact the algorithm's performance - in the extreme case where \actionValueEstimate=0, the algorithm will keep pulling the first arm that succeeds,preventing any further exploration.
 In a practical sense, when implementing this in code, it could explore other arms when the programming language registers the success rate as so low, it rounds down to 0.
-For example, Python will do this only when the success rate goes below $10^{-324}$\cite{python_min_float}.
+For example, Python will do this only when the success rate goes below $10^{-324}\%$ \cite{python_min_float}.
 
 \subsubsection{Greedy}
 \label{sec:Greedy}
@@ -106,7 +120,7 @@ Then, at each time step $t$, the greedy algorithm selects the arm $A_t$ with the
 The greedy algorithm can be summarized as follows:
 
 \pseudobox{%
-    \KwIn{List of arms $\mathcal{A}$ with unknown distributions $\armDistributionVect$, action-value estimate \actionValueEstimate}
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, action-value estimate \actionValueEstimate}
     \KwOut{Selection strategy}
     \BlankLine
     \ForEach{arm $i = 1$ \KwTo $K$}{
@@ -127,18 +141,19 @@ The greedy algorithm can be summarized as follows:
 
 Although this algorithm is simple and fast, it tends to exploit the immediate best option, and very rarely explores other options to try and optimise it's rewards.
 
-It also is extremely sensitive to initial results, which significantly impacts it's performance. For example, if a 3-arm bandit has arms (0.4, 0.75, 0.8), it could get unlucky with reasonable probability 2\% to get rewards (1, 0, 0), which effectively locks it in to keep pulling arm 0, even though the other two arms are much better.
+However, the Greedy algorithm can exhibit linear regret under general conditions: : consider a 2-arm bandit with arms 0.9 and 0.8. Employing the Greedy algorithm may lead to linear regret, if it gets unlucky and gets a miss on arm 1, and a hit on arm 2, with probability 8\%. This essentially lock the algorithm into choosing this sub-optimal arm, and as a result, it could miss out on the higher reward arm, leading to persistent linear regret.
 
 \subsubsection{Epsilon Greedy}
 \label{sec:EpsilonGreedy}
 The Epsilon Greedy algorithm is a combination of the Greedy and Randomized algorithm, addressing their tendencies to over-exploit and over-explore. It introduces a trade-off by incorporating an additional parameter $\epsilon$.
 
-The core of the Epsilon Greedy algorithm is the same action-value estimate for each arm, as described in the Greedy algorithm. However, instead of always selecting the arm with the highest estimated success rate, the Epsilon Greedy algorithm randomly explores other arms with the hope of finding potentially better options. This choice is determined by simply sampling a Bernoulli distribution based on $\epsilon$.
+The core of the Epsilon Greedy algorithm is the same action-value estimate for each arm, as described in the Greedy algorithm. However, instead of always selecting the arm with the highest estimated success rate, the Epsilon Greedy algorithm randomly explores other arms with the hope of finding potentially better options. This choice is determined by sampling a Bernoulli distribution based on a probability of doing something random \epsilonFunction, which varies as a function of time $t$. Usually, this is either constant, linearly decreasing, or constant with a drop to 0.
+
 
 The algorithm can be summarized as follows:
 
 \pseudobox{%
-    \KwIn{List of arms $\mathcal{A}$ with unknown distributions $\armDistributionVect$, action-value estimate \actionValueEstimate, exploration rate $\epsilon$}
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, action-value estimate \actionValueEstimate, sequence of exploration rates $(\epsilon_t)_{t \in [\timeHorizon]}$}
     \KwOut{Selection strategy}
     \BlankLine
     \ForEach{arm $i = 1$ \KwTo $K$}{
@@ -148,8 +163,12 @@ The algorithm can be summarized as follows:
     }
     \BlankLine
     \For{$t = 1,2,\ldots$}{
-        With probability $\epsilon$, choose a random arm $A_t \leftarrow$ Randomized(K)\newline
-        Otherwise, choose arm $A_t = a$ with the highest success rate: $a \leftarrow \arg\max_i Q_i$\newline
+        \If{\epsilonFunction}{
+            Choose a random arm $A_t \leftarrow$ Randomized(K)
+        }
+        \Else{
+            Choose arm $A_t = a$ with the highest success rate: $a \leftarrow \arg\max_i Q_i$
+        }
         Receive the reward $R_t$ by pulling arm $A_t$\newline
         Increment count: $N_{A_t} \leftarrow N_{A_t} + 1$\newline
         Increment successes: $S_{A_t} \leftarrow S_{A_t} + R_t$\newline
@@ -158,19 +177,130 @@ The algorithm can be summarized as follows:
 }
 }{Epsilon Greedy Algorithm}
 
-A small $\epsilon$ value results in a more greedy strategy where the algorithm primarily exploits the current best arm. Conversely, a larger $\epsilon$ value increases exploration and encourages the algorithm to try different arms more frequently.
+Small \epsilonFunction values results in a more greedy strategy where the algorithm primarily exploits the current best arm. Conversely, a larger  \epsilonFunction values increases exploration and encourages the algorithm to try different arms more frequently.
 
-While the Epsilon Greedy algorithm can mitigate the issues of the Greedy and Randomized algorithm, it is not without its shortcomings - set the exploration rate $\epsilon$ too low, and the algorithm may get stuck in local sub-optimal arms and miss out on potentially better arms. On the other hand, too high values of $\epsilon$ means it might spend too much time exploring and not enough time exploiting the best arms, leading to, again, sub-optimal performance.
+While the Epsilon Greedy algorithm can mitigate the issues of the Greedy and Randomized algorithm, it is not without its shortcomings - set the exploration rates in \epsilonFunction too low, and the algorithm may get stuck in local sub-optimal arms and miss out on potentially better arms. On the other hand, too high values of \epsilonFunction means it might spend too much time exploring and not enough time exploiting the best arms, leading to, again, sub-optimal performance.
+
+The Epsilon-Greedy algorithm can also exhibit linear regret under general conditions: consider a 2-arm bandit with arms 0.9 and 0.4. Using the Epsilon-Greedy algorithm with a fixed exploration rate \epsilonFunction = 0.5 $\forall t$. This initial randomness causes persistent reliable frequent sub-optimal selections, even as the algorithm learns and favors the better arm. The initial exploration-induced regret persists, resulting in an overall linear regret growth no less than (0.9 - (0.9+0.4)/2) = 0.25 per run. A good rule of thumb to follow is to never, in the long run, have \epsilonFunction $> \frac{1}{\numArms} - \frac{1}{\numArms^2}$, since this will cause the algorithm to, at worst, behave purely greedily
 
 
 \subsubsection{Upper Confidence Bound (UCB)}
 \label{sec:UCB}
-Describe high-level intuition
-Pseudo-code
-Advantages and Disadvantages.
 
-\subsubsection{Thompson}
-\label{sec:Thompson}
-Describe high-level intuition
-Pseudo-code
-Advantages and Disadvantages.
+\hrnote{https://www.jmlr.org/papers/volume3/auer02a/auer02a.pdf}
+
+The Upper Confidence Bound (UCB) algorithm is a widely used multi-armed bandit algorithm that balances exploration and exploitation by having a varying an exploration rate $c$, which creates an ‘uncertainty-driven’ exploration, allowing it to adaptively explore arms based on the level of uncertainty in their estimated success rates. \hrnote{I would give less emphasis on $c$ and more emphasis on the the background in confidence intervals.}
+
+The core idea behind UCB is to choose arms that have the potential to provide high rewards while considering the uncertainty associated with their success rates. It accomplishes this by maintaining confidence intervals around the estimated success rates of each arm and selecting the arm with the highest upper confidence bound at each time step.
+
+In general terms, any UCB algorithm can be described by:
+
+$$
+A_t = \arg\max_i \left[ \text{exploitation term} + c \times \text{exploration term} \right]
+$$
+
+where the exploration term tends to zero as $t \rightarrow \infty$. More specifically in this paper\hrnote{project?}, we will use\cite{Roberts_2021} \hrnote{add in other references}:
+
+$$
+A_t = \arg\max_i \left( Q_i + c \sqrt{\frac{\log(t)}{N_i}} \right)
+$$
+
+\hrnote{Mention Hoeffding's inequality..}
+
+\hrnote{Discuss why we use finite sample concentration inequality based confidence intervals vs. CLT type confidence intervals.}
+The algorithm can be summarized as follows:
+
+\pseudobox{%
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, sequence of time steps $(t)_{t \in [\timeHorizon]}$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Initialise success rate $Q_i \leftarrow $\actionValueEstimate\newline
+        Initialise count $N_i \leftarrow 0$
+    }
+    \BlankLine
+    \For{$t = 1,2,\ldots$}{
+        Choose arm $A_t \leftarrow \arg\max_i \left( Q_i + c \sqrt{\frac{\log(t)}{N_i}} \right)$\;
+        Receive the reward $R_t$ by pulling arm $A_t$\;
+        Increment count: $N_{A_t} \leftarrow N_{A_t} + 1$\;
+        Update success rate: $Q_{A_t} \leftarrow \frac{S_{A_t}}{N_{A_t}}$
+    }
+}{Upper Confidence Bound (UCB) Algorithm}
+
+In the UCB algorithm, it aims to balance the exploitation of arms with high estimated success rates and the exploration of arms with high uncertainty or limited exploration history:
+
+\begin{itemize}
+    \item $Q_i$ chooses greedily which arm to pick given their past success rates
+    \item $c \sqrt{\frac{\log(t)}{N_i}}$ attempts to sway the greedy exploration, by adding some uncertainty to the result.
+    \begin{itemize}
+        \item If an arm hasn't been pulled very often, the uncertainty is very large, and vice versa. Therefore, over time, the algorithm becomes more and more `confident' about it's estimates
+        \item Due to the logarithmic nature of this particular uncertainty term, it'll slowly increase when arms aren't selected, but quickly shrink when they are. Therefore, the algorithm will tend to not `give up' on arms that appear to be sub-optimal, and will pull them infrequently until a significant score is obtained by another arm
+    \end{itemize}
+\end{itemize}
+
+One of the key advantages of UCB is that it naturally adapts its exploration strategy over time. As the algorithm collects more data and gains confidence in the success rates of different arms, the exploration bonus diminishes, leading to a more exploitation-focused strategy. In comparison to the previous algorithms, UCB offers a more systematic approach to exploration by considering uncertainty explicitly. Depending on the problem at hand, UCB can provide a more efficient trade-off between exploration and exploitation, potentially leading to better overall performance in various applications.
+
+\hrnote{Consider a regret bound for UCB.. see e.g. https://tor-lattimore.com/downloads/book/book.pdf}
+
+However, UCB also has its limitations. Similarly to Epsilon Greedy, the choice of the exploration parameter $c$ can significantly impact the algorithm's performance, and selecting an appropriate value often requires some prior knowledge or trial and error.
+
+
+\subsubsection{(Bernoulli) Thompson Sampling}
+\label{sec:BernoulliThompsonSampling}
+Thompson Sampling is another popular approach to MAB - unlike the Upper Confidence Bound (UCB) algorithm, Thompson Sampling approaches the problem from a Bayesian perspective, leveraging posterior probability distributions to make decisions about which arms to pull.
+
+At its core, Thompson Sampling maintains a probabilistic model of the true success rate distribution for each arm. Instead of trying to estimate a single success rate for each arm with a single value, Thompson Sampling maintains an entire posterior distribution of success rates, which is updated as the algorithm collects more data.
+
+The algorithm is named after William R. Thompson, who introduced it in his paper ``On the Likelihood that One Unknown Probability Exceeds Another in View of the Evidence of Two Samples'' \cite{Thompson_1933} in 1933. The central idea behind Thompson Sampling is to select arms for exploration and exploitation according to their sampled success rates from their respective distributions.
+
+The Thompson Sampling algorithm can be summarized as follows:
+
+\pseudobox{%
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, sequence of time steps $(t)_{t \in [\timeHorizon]}$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    \For{$t = 1,2,\ldots$}{
+        Sample a success rate $\theta_i$ from the distribution $\armDistribution{i}$ associated with arm $i$ for all $i \in \numArms$\;
+        Choose arm $A_t \leftarrow \arg\max_i \theta_i$\;
+        Receive the reward $R_t$ by pulling arm $A_t$\;
+        Update the distribution parameters for arm $A_t$ based on the observed reward;
+    }
+}{Thompson Sampling Algorithm}
+
+Since we are discussing the Bernoulli bandit, the appropriate algorithm is the Bernoulli Thompson Sampling, often abbreviated to BernTS, which is outlined below. It utilises the Beta distribution, which is very suitable for modeling probabilities in Bernoulli trials \hrnote{mention the idea of a ``conjugate prior''}. Each arm $i \in [0, \numArms]$ is associated with a Beta distribution:
+
+$$\armDistribution{i} \sim \mathrm{Beta}(S_i + \alpha_i, F_i + \beta_i)$$
+
+In this algorithm, priors are introduced - any initial beliefs or assumptions about the environment before any data is collected. $\alpha$ represents past "positive" experience, and conversely $\alpha$ represents past "negative" experience. By incorporating priors into BernTS, it starts with a base understanding of each arm's probabilities, which is refined over time, slowly becoming less influential as arms are explored, aiding the exploration/exploitation trade-off.
+
+\ognote{Would be nice to have some "working examples" defined at the top e.g Lab tests or the lottery}
+
+\pseudobox{%
+    \KwIn{List of arms $\armsList$ with Bernoulli success probabilities $\theta_i$, sequence of time steps $(t)_{t \in [\timeHorizon]}$, priors $\alpha_i, \beta_i$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Initialise number of successes $S_i \leftarrow 0$\;
+        Initialise number of failures $F_i \leftarrow 0$\;
+    }
+    \For{$t = 1,2,\ldots$}{
+        Sample a success probability $\theta_i$ from $\text{Beta}(S_i + \alpha_i, F_i + \beta_i)$ associated with arm $i$ for all $i \in \numArms$\;
+        Choose arm $A_t \leftarrow \arg\max_i \theta_i$\;
+        Receive the reward $R_t$ by pulling arm $A_t$\;
+        \If{$R_t = 1$}{
+            $S_i \mathrel{+}= 1$
+        }
+        \Else{
+            $F_i \mathrel{+}= 1$
+        }
+    }
+}{Bernoulli Thompson Sampling Algorithm}
+
+
+Thompson Sampling finds a balance between exploration and exploitation, since it has a built-in exploration mechanism, occasionally sampling arms that may not be currently considered the best based on existing data. Over time, the algorithm's estimates improve as more data is collected, leading to more accurate decisions.
+
+Thompson Sampling's key advantages are its simplicity and adaptability. It naturally handles uncertainty and adjusts its exploration strategy based on observed data. This adaptability makes it particularly effective when arm success rate distributions may change over time.
+
+However, it struggles to manage the computational complexity of sampling from complex distributions, especially when dealing with a large number of arms. Also, like other bandit algorithms, Thompson Sampling's performance can be affected by the choice of hyper-parameters (priors). Incorrect choices here can cause the algorithm to produce very unreliable results.
+
+\ognote{Probably should add a graphed example of TS returning complete rubbish with poor hyper-parameters, just to make the point}
