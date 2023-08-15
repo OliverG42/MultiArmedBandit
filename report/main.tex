@@ -10,6 +10,13 @@
 
 \newcommand{\projecttitle}{The Project Title Goes Here}
 \newcommand{\submissiondate}{April 2024}
+\newcommand{\red}[1]{{\color{red}#1}}
+
+
+\usepackage[draft,inline,nomargin,index]{fixme}
+\fxsetup{theme=color,mode=multiuser}
+\FXRegisterAuthor{og}{aog}{\color{blue} OG}
+\FXRegisterAuthor{hr}{ahr}{\color{red} HR}
 
 \begin{document}
 
@@ -26,6 +33,6 @@
 \include{chapter2} 
 
 \bibliographystyle{unsrt}
-\bibliography{bibliography}
+\bibliography{report/references}
 
 \end{document}
