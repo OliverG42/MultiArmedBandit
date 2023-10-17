@@ -1,11 +1,10 @@
 import multiprocessing
 import random
-import sys
 from numpy import cumsum
 
 import Agents
 from ArmState import ArmState
-from experimental import Ripple, Rag, Cliff
+from experimental import Ripple, Cliff
 import utils
 
 
@@ -115,7 +114,7 @@ if __name__ == "__main__":
         # European and American roulette chances of winning for red/black
         [0.4865, 0.4737],
         # Overloading with way too many options
-        [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(50)],
+        [float("{:.3f}".format(random.uniform(0, 1))) for _ in range(100)],
         # Getting struck by lightning VS Being dealt a Royal Flush VS Bowling a 300-point game
         # All algorithms on average perform terribly, which isn't surprising at all
         [1 / 15300, 1 / 649739, 1 / 11500],
@@ -128,7 +127,7 @@ if __name__ == "__main__":
         agents = [
             Cliff(takeover=0.5),
             Ripple(ArmState(probabilities), limit_down=0.05),
-            #Agents.Ucb(),
+            Agents.Ucb(),
             Agents.BernTS(),
         ]
         perform_test(probabilities, agents, time_horizon, num_trials)

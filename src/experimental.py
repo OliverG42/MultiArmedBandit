@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 from Agents import Agent
 from ArmState import ArmState
-from src.utils import lazy_integration
+from utils import lazy_integration
 
 
 def plot_prob_success(wins, losses, colour, identifier=None):

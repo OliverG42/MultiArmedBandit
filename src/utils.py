@@ -5,7 +5,7 @@ from numpy import mean, std
 import numpy as np
 from matplotlib import pyplot as plt
 
-from src.ColourSink import ColourSink
+from ColourSink import ColourSink
 
 
 def plot_graph(data, num_trials):
@@ -42,7 +42,17 @@ def plot_graph(data, num_trials):
             fmt=" ",
             color=colour,
             alpha=0.8,
+            elinewidth=1,
         )
+
+        # Add horizontal lines at the top and bottom of the error bars
+        size = num_trials/100
+        for i in range(offset, num_trials, error_bar_interval):
+            x = i
+            y = avg_cumulative_regrets[i]
+            err = std_cumulative_regrets[i]
+            plt.plot([x - size, x + size], [y + err, y + err], color=colour, linewidth=1)  # Top line
+            plt.plot([x - size, x + size], [y - err, y - err], color=colour, linewidth=1)  # Bottom line
 
         offset += 1
 

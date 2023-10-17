@@ -79,11 +79,15 @@ class CompletelyRandom(Agent):
 
 class Ucb(Agent):
     def choose_lever(self, arm_state):
-        confidence_bounds = arm_state.success_rates + np.sqrt(
-            (2 * np.log(arm_state.total_pulls + 1))
+        exploitation_factor = arm_state.success_rates
+
+        exploration_factor = 1/2 * np.sqrt(
+            (np.log(arm_state.total_pulls + 1))
             /
-            np.where(arm_state.total_pulls == 0, 1, arm_state.total_pulls)
+            np.where(arm_state.arm_pulls == 0, np.ones(arm_state.num_arms), arm_state.arm_pulls)
         )
+
+        confidence_bounds = exploitation_factor + exploration_factor
 
         return np.argmax(confidence_bounds)
 
