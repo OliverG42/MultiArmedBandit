@@ -1,70 +1,5 @@
-\chapter{Introduction}
-\label{cha:chapter1} % (labels for cross referencing)
-
-%% 
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\Z}{\mathbb{Z}}
-\newcommand{\R}{\mathbb{R}}
-\newcommand{\E}{\mathbb{E}}
-\newcommand{\Prob}{\mathbb{P}}
-
-
-\newcommand{\actionValueEstimate}{$\mathcal{E}$}
-\newcommand{\epsilonFunction}{$\varepsilon(t)$}
-
-
-
-
-
-%%
-
-\newcommand{\numArms}{K}
-\newcommand{\armsList}{A}
-\newcommand{\timeHorizon}{T}
-\newcommand{\armDistribution}[1]{\mathrm{P}_{#1}}
-\newcommand{\armPopulationMean}[1]{\mu_{#1}}
-\newcommand{\maxPopulationMean}{\armPopulationMean{\star}}
-\newcommand{\armDistributionVect}{\mathrm{P}}
-
-\newcommand{\action}[1]{A_{#1}}
-
-\newcommand{\reward}[2]{
-   \ifthenelse{\isempty{#2}}{
-   Y_{#1}(\action{#1})}{
-   Y_{#1}(#2)}}
-
-\newcommand{\policy}{\varphi}
-
-\newcommand{\cumulativeRegret}[2]{\mathcal{R}_{#1}(#2)}
-
-
-
-The Multi-Armed Bandit problem (often abbreviated to MAB), is a framework in machine learning and decision theory, in which, an agent is presented with a set of actions, each with an unknown reward distribution assigned to it. The agent's objective is to attempt to maximise it's cumulative reward over a period of time by analysing the information it gathers from performing actions.
-
-For the purpose of this paper, we define the following:
-
-We will consider a multi-armed bandit problem with $K$ arms and a time horizon $T$, where $K$, $N \in \N$.
-
-A MAB with $K$ arms with distributions $\armDistributionVect = (\armDistribution{1}, \dots , \armDistribution{K})$, such that arm $i$ has distribution $\armDistribution{k}$. Let $\armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions.
-
-
-For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. We shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy
-
-$$\policy: \bigcup_{\ell \in \N}([K]\times \R)^\ell \times [0,1] \rightarrow [K]$$ 
-
-denotes a function for selecting actions, so that at each time step $t \in [T]$, we have
-
-$$\action{t}= \policy((\action{1},\reward{1}{}),\ldots,(\action{t-1},\reward{t-1}{}),W_t)$$
-
-with $W_t$ denoting an independent random variable.
-
-
-The (random) cumulative regret for a policy $\policy$ is then defined by
-$$
-\cumulativeRegret{T}{\policy}:=T \cdot \max_{k \in [K]} \armPopulationMean{k}-\sum_{t \in [T]}\armPopulationMean{\action{t}},
-$$
-where the actions $\action{t}$ are selected via the policy $\policy$.
-
+\chapter{Algorithmic Approaches}
+\label{cha:algorithmic} % (labels for cross referencing)
 
 \section{The Bernoulli Bandit Vs The Gaussian Bandit}
 \label{sec:BernoulliBandit}
@@ -189,29 +124,32 @@ The Epsilon-Greedy algorithm can also exhibit linear regret under general condit
 
 \hrnote{https://www.jmlr.org/papers/volume3/auer02a/auer02a.pdf}
 
-The Upper Confidence Bound (UCB) algorithm is a widely used multi-armed bandit algorithm that balances exploration and exploitation by having a varying an exploration rate $c$, which creates an ‘uncertainty-driven’ exploration, allowing it to adaptively explore arms based on the level of uncertainty in their estimated success rates. \hrnote{I would give less emphasis on $c$ and more emphasis on the the background in confidence intervals.}
+The Upper Confidence Bound algorithm (UCB) is a popular MAB algorithm that cleverly modifies the exploration rate using the confidence bounds around each arm. These help UCB estimate how likely an arm is to succeed, while factoring in how uncertain we are about this estimate.
 
-The core idea behind UCB is to choose arms that have the potential to provide high rewards while considering the uncertainty associated with their success rates. It accomplishes this by maintaining confidence intervals around the estimated success rates of each arm and selecting the arm with the highest upper confidence bound at each time step.
+The key idea is to choose arms that might give high rewards, while considering the uncertainty around their success rates. At each step, UCB selects the arm that strikes the best balance between exploiting its success rate and exploring its confidence bound. \ognote{Add "whisker plot" graph to visualise this}
 
 In general terms, any UCB algorithm can be described by:
 
 $$
-A_t = \arg\max_i \left[ \text{exploitation term} + c \times \text{exploration term} \right]
+A_t = \arg\max_i \left[ \text{exploitation term} + \text{exploration term} \right]
 $$
 
-where the exploration term tends to zero as $t \rightarrow \infty$. More specifically in this paper\hrnote{project?}, we will use\cite{Roberts_2021} \hrnote{add in other references}:
+where the exploration term tends to zero as $t \rightarrow \infty$. More specifically in this project, we will use this\cite{Roberts_2021} method\hrnote{add in other references}:
 
 $$
-A_t = \arg\max_i \left( Q_i + c \sqrt{\frac{\log(t)}{N_i}} \right)
+A_t = \arg\max_i \left( Q_i + c \times \sqrt{\frac{\log(t)}{N_i}} \right)
 $$
 
-\hrnote{Mention Hoeffding's inequality..}
+For some confidence value $c$. We use $c = 2$ for optimal regret. This allows us to derive the sensible confidence bounds, since it gives a probabilistic guarantee of how likely our sample mean is to deviate from the true mean of an arm distribution.
 
-\hrnote{Discuss why we use finite sample concentration inequality based confidence intervals vs. CLT type confidence intervals.}
+For UCB, finite sample concentration inequality-based (FSCI) confidence intervals are preferred over Central Limit Theorem (CLT) type confidence intervals due to their better performance when handling small sample sizes. CLT-based intervals rely on the assumption of having a large sample size (which ensures the sample mean converges to a normal distribution). However, in MAB problems, we sometimes have very limited data for some/all arms.
+
+In contrast, FSCI-based confidence intervals such as Hoeffding inequality, give bounds on the deviation of the sample mean from the true mean with high probability, even with very small sample sizes. This helps account for the inherent randomness of MAB, and the exploration-exploitation trade-off, as arms that have a poor sample mean calculated from very few attempts still have a good-enough guess for their true mean.
+
 The algorithm can be summarized as follows:
 
 \pseudobox{%
-    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, sequence of time steps $(t)_{t \in [\timeHorizon]}$}
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, confidence value $c$, sequence of time steps $(t)_{t \in [\timeHorizon]}$}
     \KwOut{Selection strategy}
     \BlankLine
     \ForEach{arm $i = 1$ \KwTo $K$}{
@@ -240,9 +178,65 @@ In the UCB algorithm, it aims to balance the exploitation of arms with high esti
 
 One of the key advantages of UCB is that it naturally adapts its exploration strategy over time. As the algorithm collects more data and gains confidence in the success rates of different arms, the exploration bonus diminishes, leading to a more exploitation-focused strategy. In comparison to the previous algorithms, UCB offers a more systematic approach to exploration by considering uncertainty explicitly. Depending on the problem at hand, UCB can provide a more efficient trade-off between exploration and exploitation, potentially leading to better overall performance in various applications.
 
-\hrnote{Consider a regret bound for UCB.. see e.g. https://tor-lattimore.com/downloads/book/book.pdf}
+\hrnote{https://tor-lattimore.com/downloads/book/book.pdf}
 
-However, UCB also has its limitations. Similarly to Epsilon Greedy, the choice of the exploration parameter $c$ can significantly impact the algorithm's performance, and selecting an appropriate value often requires some prior knowledge or trial and error.
+The regret bound for the UCB $\policy$ is sub-linear. Indeed, the rate is $O(\sqrt{n})$. \hrnote{possibly mention optimally.}
+
+Finally, given a failure probability $\delta \in (0,1)$, we let $\ucb{a}{t}{\delta}$ denote the upper confidence bound on $\armPopulationMean{a}$ based on the first $t$ rounds,
+
+
+\begin{theorem}[UCB regret bound]\label{thm:ucbRegretBound}
+Suppose we have a stochastic bandit problem with time horizon $\timeHorizon \in \N$ and $\numArms \in \N$ with corresponding gaps $(\gap{i})_{i \in [\numArms]}$. Then letting $\ucbPolicy$ be the UCB policy with parameters $\delta$, $\totalFunction{a}{t}$ and $\empiricalMeanReward{a}{t}$, we have the following regret bound,
+\begin{align*}
+\cumulativeRegret{T}{\ucbPolicy} \leq 8 \sqrt{\timeHorizon \numArms \log(\timeHorizon)} + 3 \sum_{i=1}^{\numArms} \gap{i}.
+\end{align*}
+\hrnote{Return to: Given general formulation that yields gap dependent and gap independent bounds..}
+
+\textcolor{red}{
+For $\epsilon \in [0,1]$,
+\begin{align*}
+\cumulativeRegret{T}{\ucbPolicy} \leq n\epsilon + \sum_{i=1}^{\numArms}\one_{\{\Delta_i \geq \epsilon\}}\left(3 \gap{i}+\frac{16 \log n}{\Delta_i}\right).
+\end{align*}
+In particular, letting $\epsilon = \sqrt{16k \log n/n}$ we obtain 
+\begin{align*}
+\cumulativeRegret{T}{\ucbPolicy} \leq 8 \sqrt{\timeHorizon \numArms \log(\timeHorizon)} + 3.
+\end{align*}
+($n$ should be $\timeHorizon$)
+}
+
+\end{theorem}
+
+
+
+We shall now give a high-level description of the proof. For completeness we give the full proof 
+
+We proceed as follows. Recall that $\totalFunction{i}{\timeHorizon}$ denotes the number of times arm $i \in [\numArms]$ has been played over the time horizon $\timeHorizon$. We break down the regret for the UCB policy,
+$$\cumulativeRegret{T}{\ucbPolicy} \leq \sum_{i=1}^{\numArms} \gap{i} \cdot \Ex(\totalFunction{i}{\timeHorizon}).$$
+
+Next, using the Law of Total Expectation, we can split up the $\Ex(\totalFunction{i}{t})$ by using a ``good event'', which is when:
+
+\begin{enumerate}
+    \item The best arm's mean is never underestimated
+    \item The other's arm's upper bounds are never higher than the best arm's mean
+\end{enumerate}
+
+So, we get:
+
+\ognote{Maybe don't need the middle part here since it's a high-level overview}
+
+$$\Ex(\totalFunction{i}{t}) = \Ex(\mathbb{I}(G_i)\totalFunction{i}{t}) + \Ex(\mathbb{I}(G_i^c)\totalFunction{i}{t}) \leq \armPopulationMean{i} + \Prob(G_i^c) \cdot n.$$
+
+We apply Hoeffding's inequality (\hrnote{ref}) obtain the bound,
+$$\Prob(G_i^c) \leq n \delta + \exp\left(-\frac{ \gap{i}^2}{4} \left\lceil \frac{8\log(1/\delta)}{\gap{i}^2} \right\rceil\right)\leq (n+1)\delta.$$
+\hrnote{replace the above bound with one only involving $\Delta_i$, $\numArms$, $\delta$.}
+
+\hrnote{consider removing from here to ..}For some $u_i$ and $c$. The full proofs outlines why $u_i = \lceil \frac{2log(1/\delta)}{(1-c)^2\gap[i]^2} \rceil$ is ideal. \hrnote{.. here..} After setting $\delta = 1/n^2$ \ognote{Do I need to say why here?}, this leads to:
+
+$$\Ex(\totalFunction{i}{t}) \leq 3 + \frac{16log(t)}{\gap{i}^2}$$
+
+Which neatly resolves when plugged back into the original equation to give:
+
+$$R_t(\policy) \leq 8 \sqrt{tk \log(t)} + 3 \sum_{i=1}^{\numArms} \gap{i}$$
 
 
 \subsubsection{(Bernoulli) Thompson Sampling}
@@ -267,13 +261,19 @@ The Thompson Sampling algorithm can be summarized as follows:
     }
 }{Thompson Sampling Algorithm}
 
-Since we are discussing the Bernoulli bandit, the appropriate algorithm is the Bernoulli Thompson Sampling, often abbreviated to BernTS, which is outlined below. It utilises the Beta distribution, which is very suitable for modeling probabilities in Bernoulli trials \hrnote{mention the idea of a ``conjugate prior''}. Each arm $i \in [0, \numArms]$ is associated with a Beta distribution:
+Since we are discussing the Bernoulli bandit, the appropriate algorithm is the Bernoulli Thompson Sampling, often abbreviated to BernTS, which is outlined below. It utilises the Beta distribution, which is very suitable for modeling probabilities in Bernoulli trials.
+
+Importantly, this utilizes a "conjugate prior", which describes a prior distribution that, when combined with the likely-hood function, gives a posterior distribution in the same family as the prior. Specifically in the case , the Beta distributions acts as the Bernoulli's conjugate prior:
+
+$$Beta(\alpha,\beta) \times Bernoulli(p) \propto Beta(\alpha',\beta')$$
+
+This property greatly simplifies the process of updating beliefs based on incoming evidence, since it's much easier to calculate compared to e.g Dirichlet (used for vector uncertainty), where $Dirichlet(\alpha_1,\alpha_2) \times Bionomial \not\propto Dirichlet(\alpha_1',\alpha_2')$
+
+Additionally, each arm $i \in [0, \numArms]$ is associated with a Beta distribution:
 
 $$\armDistribution{i} \sim \mathrm{Beta}(S_i + \alpha_i, F_i + \beta_i)$$
 
 In this algorithm, priors are introduced - any initial beliefs or assumptions about the environment before any data is collected. $\alpha$ represents past "positive" experience, and conversely $\alpha$ represents past "negative" experience. By incorporating priors into BernTS, it starts with a base understanding of each arm's probabilities, which is refined over time, slowly becoming less influential as arms are explored, aiding the exploration/exploitation trade-off.
-
-\ognote{Would be nice to have some "working examples" defined at the top e.g Lab tests or the lottery}
 
 \pseudobox{%
     \KwIn{List of arms $\armsList$ with Bernoulli success probabilities $\theta_i$, sequence of time steps $(t)_{t \in [\timeHorizon]}$, priors $\alpha_i, \beta_i$}
@@ -304,3 +304,46 @@ Thompson Sampling's key advantages are its simplicity and adaptability. It natur
 However, it struggles to manage the computational complexity of sampling from complex distributions, especially when dealing with a large number of arms. Also, like other bandit algorithms, Thompson Sampling's performance can be affected by the choice of hyper-parameters (priors). Incorrect choices here can cause the algorithm to produce very unreliable results.
 
 \ognote{Probably should add a graphed example of TS returning complete rubbish with poor hyper-parameters, just to make the point}
+
+
+\subsubsection{Ripple Sampling}
+\label{sec:ripple}
+
+\ognote{Some sort of intro and explaination should go here}
+
+The algorithm can be summarized as follows:
+
+\pseudobox{%
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, pessimism tolerance $\rho$, numerical tolerance $\epsilon$, sequence of time steps $(t)_{t \in [\timeHorizon]}$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Initialise success count $S_i \leftarrow 0$\newline
+        Initialise number of plays $M_i \leftarrow 0$
+    }
+
+    \BlankLine
+    \SetKwFunction{normProb}{normProb}
+    \SetKwProg{Fn}{Function}{:}{}
+    \Fn{\normProb{$x, s, m$}}{
+        $a \leftarrow \frac{s}{m}$\;
+        \Return $\frac{x^{s} (1-x)^{m-s}}{a^{s}  (1-a)^{m-s}}$\;
+    }
+    
+    \BlankLine
+    \For{$t = 1,2,\ldots$}{
+        \For{$i \in [K]$}{
+            Use binary search to find $X_i$ so $|\mathrm{normProb}(X_i, S_i, M_i) - \rho| \leq \epsilon$\;
+            }
+        Choose arm $A_t \leftarrow \arg\max_i X_i$\;
+        Receive the reward $R_t$ by pulling arm $A_t$\;
+        $M_i = M_i + 1$\;
+        \If{$R_t = 1$}{
+            $S_i \leftarrow S_i + 1$\;
+        }
+    }
+}{Ripple Algorithm}
+
+\ognote{Would be interesting to include some sort of lower bound proof here}
+
+\hrnote{Connections to Thompson sampling, and Malliard sampling}

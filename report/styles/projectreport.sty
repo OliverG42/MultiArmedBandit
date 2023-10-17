@@ -13,14 +13,15 @@
 \usepackage{caption}
 \usepackage{blindtext}
 \usepackage{algorithm2e}
-
-\usepackage{algorithmstyle}
+\usepackage{xifthen}
+\usepackage{mathtools}
 
 % Page setup
 \usepackage{geometry} 
 \geometry{a4paper, margin=1in, twoside}
 \usepackage{setspace}
 \doublespacing
+\linespread{1.5}
 
 % Code listings
 \usepackage{listings}
@@ -61,21 +62,21 @@
 
 
 % Title page
-\renewcommand{\maketitle}{
+\renewcommand{\maketitle}[5]{
     \thispagestyle{empty}
     \begin{center}
     	\vspace*{2cm}
-    	\includegraphics[width = 7cm]{bristolLogo.png} \par
+    	\includegraphics[width = 7cm]{report/images/bristolLogo.png} \par
     	\vspace{2cm}
-    	\textbf{\Large{Faculty of Mathematics}} \par
+    	\textbf{\Large{#1}} \par
     	\vspace{1cm}
-    	\textbf{\LARGE{\name}} \par
+    	\textbf{\LARGE{#2}} \par
     	\vspace{1cm}
-    	\textbf{\Large \course} \par
+    	\textbf{\Large{#3}} \par
     	\vspace{1cm}
-    	\textbf{\Huge \projecttitle} \par
+    	\textbf{\Huge{#4}} \par
     	\vspace{1cm}
-    	\textbf{\Large \submissiondate} \par
+    	\textbf{\Large{#5}} \par
     	\vfill 
     	\textbf{\Large Department of Mathematics}
     	\vspace{1cm}
@@ -84,3 +85,34 @@
     \pagenumbering{roman}
     \setcounter{page}{0}
 }
+
+% Algorithm style
+\newcommand{\pseudobox}[3][1\textwidth]{
+    \begin{center}
+    \fbox{
+    \begin{minipage}{#1}
+        \begin{algorithm}[H]
+        \SetAlgoLined
+        \fontsize{12}{12}\selectfont
+        #2 % Algorithm goes here!
+        \caption{#3}
+        \end{algorithm}
+    \end{minipage}
+    }\newline
+    \end{center}
+}
+
+% Used for notes
+\usepackage[draft,inline,nomargin,index]{fixme}
+\fxsetup{theme=color,mode=multiuser}
+\FXRegisterAuthor{og}{aog}{\color{blue} OG}
+\FXRegisterAuthor{hr}{ahr}{\color{red} HR}
+
+% Bibliography
+\usepackage[style=numeric-comp, backend=biber, sorting=none]{biblatex}
+\DeclareFieldFormat{url}{\href{#1}{\nolinkurl{#1}}}
+\renewbibmacro*{urldate}{}
+\renewbibmacro*{in:}{}
+
+% Theorems
+\usepackage{nameref}

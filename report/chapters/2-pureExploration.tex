@@ -1,0 +1,52 @@
+\chapter{Pure Exploration}
+\label{cha:pureexploration}
+
+\section{The Premise}
+\label{sec:premise}
+Moving on from our discussion of exploration-exploitation algorithms in MAB problems, we'll now explore the concept of pure exploration. Unlike exploration-exploitation, which has to balance between exploiting the best arm whilst exploring for better ones, pure exploration simplifies this by focusing solely on exploration. This means it doesn't care about being penalized choosing sub-optimal arms, as it's goal is to find the best arm as fast as possible with some certainty value.
+
+Since in pure exploration we no longer care about cumulative regret, we have to redefine our performance measure. One popular method is using simple regret, which is defined as "the expected regret to be chosen after time t by policy $\policy$":
+
+$$\simpleRegret{t, \policy}{\policy} = \Ex_{\policy}(\gap{A_{t+1}}).$$
+
+Intuitively, relating to our Ice Cream example \ref{ex:ice-cream}, this represents the expected performance difference between the best ice cream and the selected one. Naturally, we want this to be as small as possible, to minimize the probability we choose a worse ice cream, although we are constrained by two factors:
+
+\begin{itemize}
+    \item How long we have (t)
+    \item How certain we want to be we've got the best arm ($\rho$)
+\end{itemize}
+
+\section{Algorithms for pure exploration - uniform}
+\label{sec:simpleregret}
+
+Uniform exploration is the simplest form of algorithm for pure exploration scenarios. Similarly to the Greedy algorithm \ref{sec:Greedy}, it samples arms in such a way that the outcome is a uniform selection. However for the Uniform exploration policy, we ensure each arm is selected perfectly uniformly. This means we have no notion of an action value estimate:
+
+\pseudobox{%
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$}
+    \KwOut{Selection strategy, best arm}
+    \BlankLine
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Initialise number of successes $S_i \leftarrow 0$
+    }
+    \BlankLine
+    \For{$t = 1,2,\ldots$}{
+        Choose arm $A_t = t \mod{K}$\newline
+        Receive the reward $R_t$ by pulling arm $a$;\newline
+        Increment successes: $S_a \leftarrow S_a + R_t$\newline
+     }
+    return arm $A_i$ with the highest number of successes: $A_i \leftarrow \arg\max_i S_a$ \newline
+
+}{Uniform Algorithm}
+
+\section{Fixed Confidence}
+\label{sec:fixedconfidence}
+
+\commented{It would also be good to understand the fixed confidence setting by looking at the introductory part of Section 33.2. For now, I would skip over 33.2.1, and continue onto Section 33.2.2 and try to make sense of Algorithm 21 and Theorem 33.6. For each of these sections (except for the lower bound) I would recommend adding some discussion to your Overleaf project as this will strengthen your understanding and be useful for the final write up.}
+
+In the previous chapter, we had some notion of certainty of our decisions, such as UCB \ref{sec:UCB} and Ripple \ref{sec:ripple}. However, our understanding was obfuscated by the exploration and exploitation factors. An exception to this is when $t \rightarrow \infty$, but this is unrealistic, and doesn't align with real-world situations, as demonstrated by the Substance Synthesis example \ref{ex:substance-synthesis}.
+
+However, in pure exploration, our only "drive" is exploration, which makes defining a certainty parameter $\certainty$ much easier. Hence, an algorithm's goal is to find the best arm, with $\certainty$ certainty, with as few samples as possible. Naturally, the exact value of $\certainty$ will vary depending on the scenario - for our Dynamic Pricing example \ref{ex:substance-synthesis}, we may have our $\certainty$ relatively low, if we expect there to be a very large difference in the results of each resistor. However, in the later stages, when changes are comparatively much smaller, we may choose a very high value for $\certainty$ so that we're very certain which changes have made an improvement.
+
+\section{The Track-and-Stop algorithm}
+\label{sec:trackandstop}
+% Explain Section 33.2.2 and try to make sense of Algorithm 21 and Theorem 33.6.

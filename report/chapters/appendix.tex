@@ -1,0 +1,166 @@
+% Theorems
+
+\chapter{Appendix}\ref{ch:appendix}
+
+\section{Key tools from probability theory}
+
+\label{sec:hoeffding}
+
+\begin{theorem}[Hoeffding's Inequality]
+Let $X_1, X_2, \ldots, X_n$ be independent random variables bounded in the interval $[a, b]$. Define the sample mean as $\bar{X}_n = \frac{1}{n}\sum_{i=1}^{n} X_i$. Then, for any $\epsilon > 0$, 
+$$P\left(\left|\bar{X}_n - \mathbb{E}(\bar{X}_n)\right| \geq \epsilon\right) \leq 2 \exp\left(-\frac{2n\epsilon^2}{(b - a)^2}\right).$$
+\end{theorem}
+
+% Proofs
+\section{Proofs of key results}
+
+\subsection{Proof of \nameref{thm:ucbRegretBound}}
+\label{app:proof_theorem_a}
+
+
+\begin{proof}[Proof of Theorem \ref{thm:ucbRegretBound}]
+
+We firstly assume, without loss of generality, that $\armPopulationMean{1} = \maxPopulationMean$. Then, we break down the regret as follows:
+
+\begin{align*}
+\cumulativeRegret{T}{\ucbPolicy} &\leq \sum_{i=1}^{\numArms} \gap{i} \cdot \Ex(\totalFunction{i}{t})
+\end{align*}
+
+The key idea now is to define a "good event" - ideally, we want:
+
+\begin{enumerate}
+    \item The best arm's mean to never be underestimated.
+    \item The other arm's upper bound is never higher than the best arm's mean.
+\end{enumerate}
+
+Hence, we get:
+
+\begin{align*}
+G_i &= \left\{ \armPopulationMean{1} < \min_{i \in [\numArms]} UCB(i) \right\}
+\cap \left\{ \armPopulationMean{i} + \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} < \mu_1 \right\}
+\end{align*}
+
+\ognote{May need expanding, since statements are sweeping}
+If $G_i$ occurs, then $\totalFunction{i}{t} \leq u_i$ for all arms, and if not, $\totalFunction{i}{t} \leq t$. We also assume $G_i^c$ is small. Hence, by the Law of Total Expectation:
+
+\begin{align*}
+\Ex(\totalFunction{i}{t}) &= \Ex(\mathbb{I}\{G_i\}\totalFunction{i}{t}) + \Ex(\mathbb{I}\{G_i^c\}\totalFunction{i}{t}) \leq u_i + \Prob(G_i^c) \cdot n
+\end{align*}
+
+Now, $\Prob(G_i^c)$ isn't very helpful at the moment, but:
+
+\begin{align*}
+G_i^c &= \left\{\armPopulationMean{1} \geq \min_{i \in [\numArms]} UCB(i)\right\}
+\cup \left\{\armPopulationMean{i} + \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} \geq \mu_1 \right\}
+\end{align*}
+
+The first of these sets is decomposed using the definition of UCB:
+
+\begin{align*}
+\left\{ \mu_1 \geq \min_{i \in [\numArms]} UCB(i) \right\}
+&\subset \left( \mu_1 \geq \min_{j \in [\numArms]} \hat{\mu}_j + \sqrt{\frac{2\log(1/\delta)}{j}} \right)\\
+&= \bigcup_{j \in [\numArms]} \left( \mu_1 \geq \hat{\mu}_j + \sqrt{\frac{2\log(1/\delta)}{j}} \right) \quad \text{(Standard set theory)}
+\end{align*}
+
+Hence, we can generate a sum of independent subgaussian random variables:
+\ognote{Add this ↑ as a corollary to reference in this?}
+
+\begin{align*}
+\Prob(\mu_1 \geq \min_{i \in [\numArms]} UCB(i))
+&\leq \Prob \left(\bigcup_{j \in [\numArms]} \left( \mu_1 \geq \hat{\mu}_j + \sqrt{\frac{2\log(1/\delta)}{j}} \right) \right) \\
+&\leq \sum_{j=1}^{n} \Prob \left( \mu_1 \geq \hat{\mu}_j + \sqrt{2\log(1/\delta)} \right) \\
+&\leq exp(-\frac{\numArms \times \sqrt{2\log(1/\delta)}^2}{2 \times 1^2}) \\
+&\leq \numArms exp(-\frac{2\log(1/\delta)}{2}) \\
+&\leq \numArms exp(-\log(1/\delta)) \\
+&= \numArms \delta
+\end{align*}
+
+The second set we can bound relatively simply assuming we've chosen our $u_i$ large enough such that $\gap{i} - \sqrt{\frac{2\log(1/\delta)}{u_i}} \geq c \gap{i}$ for some c. Then:
+\ognote{Add corollary here as well}
+
+\begin{align*}
+\Prob\left( \hat{\mu}_i + \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} \geq \mu_1 \right)
+&= \Prob\left( \hat{\mu}_i + \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} \geq \armPopulationMean{i} + \gap{i} \right) \quad \text{Since $\mu_1 = \armPopulationMean{i} + \gap{i}$} \\
+&= \Prob\left( \hat{\mu}_i - \armPopulationMean{i} \geq \gap{i} - \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} \right) \\
+&= \Prob\left( \hat{\mu}_i - \armPopulationMean{i} \geq c \gap{i} \right)
+\leq exp(-\frac{u_i c^2 \gap{i}^2}{2})
+\end{align*}
+
+Hence, we now have
+
+\begin{align*}
+\Prob(G_i^c) &\leq n \delta + \exp\left(-\frac{u_i c^2 \gap{i}^2}{2}\right)
+\end{align*}
+
+Which leads back to:
+
+\begin{align*}
+\Ex(\totalFunction{i}{t}) &\leq u_i + n \left(n \delta + \exp\left(-\frac{u_i c^2 \gap{i}^2}{2}\right)\right)
+\end{align*}
+
+Now, choosing $u_i$ can be simple by rearranging the following:
+
+\begin{align*}
+& \gap{i} - \sqrt{\frac{2\log(1/\delta)}{u_i}} \geq c \gap{i} \\
+& u_i \geq \frac{2\log(1/\delta)}{(1-c)^2\gap{i}^2} \\
+& u_i = \lceil \frac{2\log(1/\delta)}{(1-c)^2\gap{i}^2} \rceil \quad \text{is a trivial solution.}
+\end{align*}
+
+Picking the natural choice \ognote{Need to clarify this} of $\delta = \frac{1}{t^2}$, this leads to:
+
+\begin{align*}
+\Ex(\totalFunction{i}{t}) &\leq u_i + t \left(t \delta + \exp\left(-\frac{u_i c^2 \gap{i}^2}{2}\right)\right) \\
+&= u_i + t^2\delta + t\exp\left(-\frac{u_i c^2 \gap{i}^2}{2}\right) \\
+&= \lceil \frac{2\log(1/\delta)}{(1-c)^2\gap{i}^2} \rceil + 1 + t^{1 - \frac{2c^2}{(1-c)^2}} \\
+&= \lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil + 1 + t^{1 - \frac{2c^2}{(1-c)^2}}
+\end{align*}
+
+Now, we just need to find a suitable value for $c \in (0, 1)$. To minimize this expression:
+\begin{itemize}
+  \item The 1st term wants $c$ to be as small as possible.
+  \item The 2nd term is a small constant, and can be ignored
+  \item The 3rd term will be polynomial unless $\frac{2c^2}{(1-c)^2} \geq 1 \implies c \geq \sqrt{2}-1  \approx 0.414$.
+\end{itemize}
+
+In the proof by Lattimore and Szepesv´ar here\cite{Lattimore_Szepesv´ar}, they use c=1/2, which leads to:
+
+\begin{align*}
+\Ex(\totalFunction{i}{t}) &\leq \lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil + 1 + t^{1 - \frac{2c^2}{(1-c)^2}} \\
+&= \lceil \frac{4\log(t)}{\frac{1}{4}\gap{i}^2} \rceil + 1 + t^{1 - \frac{1/2}{1/4}} \\
+&= \lceil \frac{16\log(t)}{\gap{i}^2} \rceil + 1 + t^{-1} \\
+&\leq \left( \frac{16\log(t)}{\gap{i}^2} + 1\right) + 1 + t^{-1} \\
+&\leq 3 + \frac{16\log(t)}{\gap{i}^2} \quad \text{Since $t^{-1} \leq 1$}
+\end{align*}
+
+Which neatly resolves when plugged back into the original equation. By using decomposition, and supposing a mystery cutoff value $\lambda$, we have:
+
+\begin{align*}
+\cumulativeRegret{T}{\ucbPolicy} &\leq \sum_{i=1}^{\numArms} \gap{i} \cdot \Ex(\totalFunction{i}{t}) \\
+&\leq \sum_{i: \gap{i} < \lambda}^{\numArms} \gap{i} \cdot \Ex(\totalFunction{i}{t}) + \sum_{i: \gap{i} \geq \lambda}^{\numArms} \gap{i} \cdot \Ex(\totalFunction{i}{t}) \\
+&\leq n \lambda + \sum_{i: \gap{i} \geq \lambda}^{\numArms} \left( 3 + \frac{16\log(t)}{\gap{i}^2} \right)  \\
+&\leq n \lambda + \frac{16k\log(t)}{\gap{i}^2} + 3 \sum_{i: \gap{i} \geq \lambda}^{\numArms} \gap{i} \\
+\cumulativeRegret{T}{\ucbPolicy} &\leq 8 \sqrt{tk \log(t)} + 3 \sum_{i=1}^{\numArms} \gap{i} 
+\end{align*}
+
+Once we set $\lambda = \sqrt{\frac{16klog(n)}{n}}$ \ognote{Huh?}
+
+The given proof exhibits elegance, but it relies on an arbitrary selection of c. In order to optimise, we must solve:
+
+\begin{align*}
+& \frac{d}{dc} \left( \lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil + 1 + t^{1 - \frac{2c^2}{(1-c)^2}} \right) = 0 \\
+& \frac{d}{dc} \left( \lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil \right) + \frac{d}{dc} \left(t^{1 - \frac{2c^2}{(1-c)^2}} \right) = 0 \\
+\end{align*}
+
+We now have a problem, because $\lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil$ is not continuous, and cannot be differentiated. Hence, we have to be pessimistic and use the fact that $\lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil \leq \frac{4\log(t)}{(1-c)^2\gap{i}^2} + 1$. We can do no better than this.
+
+Hence, using the chain rule:
+
+\begin{align*}
+& \frac{d}{dc} \left( \frac{4\log(t)}{(1-c)^2\gap{i}^2} + 1\right) + \frac{d}{dc} \left(t^{1 - \frac{2c^2}{(1-c)^2}} \right) = 0 \\
+& \frac{d}{dc} \left( \frac{4\log(t)}{(1-c)^2\gap{i}^2} + 1\right) + \left(ln(t) \cdot t^{1 - \frac{2c^2}{(1-c)^2}} \cdot \frac{d}{dc} \left( -\frac{4c}{(1-c)^3} \right) \right) = 0 \\
+& \left( \frac{4log(t)}{\gap{i}^2} \cdot \frac{d}{dc} \left( (1-c)^{-2} \right) \right) + \left(log(t) \cdot t^{1 - \frac{2c^2}{(1-c)^2}} \cdot \frac{d}{dc} \left( -\frac{4c}{(1-c)^3} \right) \right) = 0 \\
+& \left( \frac{8log(t)}{\gap{i}^2 \cdot (1-c)^3} \right) + \left(log(t) \cdot t^{1 - \frac{2c^2}{(1-c)^2}} \cdot \frac{d}{dc} \left( -\frac{4c}{(1-c)^3} \right) \right) = 0 \\
+\end{align*}
+
+
+\end{proof}
