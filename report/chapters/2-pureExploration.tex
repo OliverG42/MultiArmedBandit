@@ -41,12 +41,190 @@ Uniform exploration is the simplest form of algorithm for pure exploration scena
 \section{Fixed Confidence}
 \label{sec:fixedconfidence}
 
-\commented{It would also be good to understand the fixed confidence setting by looking at the introductory part of Section 33.2. For now, I would skip over 33.2.1, and continue onto Section 33.2.2 and try to make sense of Algorithm 21 and Theorem 33.6. For each of these sections (except for the lower bound) I would recommend adding some discussion to your Overleaf project as this will strengthen your understanding and be useful for the final write up.}
-
 In the previous chapter, we had some notion of certainty of our decisions, such as UCB \ref{sec:UCB} and Ripple \ref{sec:ripple}. However, our understanding was obfuscated by the exploration and exploitation factors. An exception to this is when $t \rightarrow \infty$, but this is unrealistic, and doesn't align with real-world situations, as demonstrated by the Substance Synthesis example \ref{ex:substance-synthesis}.
 
-However, in pure exploration, our only "drive" is exploration, which makes defining a certainty parameter $\certainty$ much easier. Hence, an algorithm's goal is to find the best arm, with $\certainty$ certainty, with as few samples as possible. Naturally, the exact value of $\certainty$ will vary depending on the scenario - for our Dynamic Pricing example \ref{ex:substance-synthesis}, we may have our $\certainty$ relatively low, if we expect there to be a very large difference in the results of each resistor. However, in the later stages, when changes are comparatively much smaller, we may choose a very high value for $\certainty$ so that we're very certain which changes have made an improvement.
+However, in pure exploration, our only "drive" is exploration, which makes defining a failure probability parameter $\failureProb$ much easier. Hence, an algorithm's goal is to find the best arm, with $(1-\failureProb)$ certainty, with as few samples as possible i.e before some stopping time $\stoppingTime$. Naturally, the exact value of $\failureProb$ will vary depending on the scenario - for our Substance Synthesis example \ref{ex:substance-synthesis}, we may have our $\failureProb$ relatively high, if we expect there to be a very large difference in the results of each resistor. However, in the later stages, when changes are comparatively much smaller, we may choose a very small value for $\failureProb$ so that we're very certain which changes have made an improvement. In order to compare any strategies, let us define:
 
-\section{The Track-and-Stop algorithm}
+\begin{definition}\label{def:method}
+    The triple $(\policy, \stoppingTime, \selectionRule)$ is a \textbf{method} $\method$, given a policy $\policy$, stopping time $\stoppingTime$, and selection rule $\selectionRule$.
+\end{definition}
+
+\ognote{Elaborate on specifics of policy, stopping time and selection rule}
+
+\begin{definition}\label{def:soundess}
+A method  $\method = (\policy, \stoppingTime, \selectionRule)$ is said to be \textbf{sound} with failure probability $\failureProb$ if for all  $v \in \banditSpace$,
+
+$$\Prob_{}(\stoppingTime < \infty  \text{ and }  \gap{\selectionRule}(v) > 0) \leq \failureProb.$$
+
+Equivalently:
+
+$$\Prob_{}(\stoppingTime < \infty  \text{ and }  \gap{\selectionRule}(v) = 0) \geq 1-\failureProb.$$
+
+\end{definition}
+
+In other words, a triple is sound if, which probability of failure $\failureProb$: The policy stops, and the current gap is optimal. The $\stoppingTime < \infty$ is needed, since a triple that doesn't stop is meaningless.
+
+Naturally, we desire some method that has policy $\policy$ that minimizes the stopping time $\stoppingTime$ and failure probability $\failureProb$. However, similar to exploration-exploitation bandits, we must strike some balance between efficiency and certainty - increasing the stopping time of $\stoppingTime$ decreases the confidence $\failureProb$ that the chosen arm is optimal. Conversely, letting the confidence $\failureProb$ increase slightly can decrease the stopping time from $\stoppingTime$ a large amount.
+
+
+\section{Track-and-Stop Strategies}
 \label{sec:trackandstop}
 % Explain Section 33.2.2 and try to make sense of Algorithm 21 and Theorem 33.6.
+It has been shown previously that the expected stopping time $\stoppingTime$ for a MAB with fixed confidence $\failureProb$ is bounded by below as follows:
+
+\begin{theorem}
+For a MAB with arm distributions $\armDistributionVect$, some method $\method = (\policy, \stoppingTime, \selectionRule)$, and failure probability $\failureProb$, $\forall v \in \banditSpace:$ \ognote{Theorem 33.5 in Lattimore}
+
+$$\Ex(\stoppingTime) \geq c^*(v) \times log\left({\frac{1}{4(1-\failureProb)}}\right)$$
+
+$$for \quad \ognote{Unsure}$$
+\end{theorem}
+
+\ognote{Insert lower bound statement}
+
+Sadly, we cannot construct an algorithm that outperforms this \ognote{the lower bound}; however, we can create one that ensures all potential outcomes are as close to the lower bound as possible. In order to do this, such an algorithm would have to estimate each arm's underlying mean $\armPopulationMean{a}$ by sampling in proportion to the empirical mean $\empiricalMeanReward{a}{t}$ for $t \leq \stoppingTime$.
+
+However, this can lead to some arms being "starved" if we initially get unfortunately poor results from the first few samplings, similarly to greedy strategies mentioned previously\ref{sec:Greedy}. Hence, we must impose some "resource equity" by requiring us to sample each arm at least some number of times at each time measure, which hopefully ensures $\empiricalMeanReward{a}{t}$ is close to $\armPopulationMean{a}$ for sufficiently large $t$
+
+
+Part of what makes pure exploration algorithms interesting is that they can terminate early whilst not having a narrow uncertainty around each arm's true mean $\armPopulationMean{a}$. This is because they typically hold estimates of each arm's true distribution $\armDistribution{a}$, which is updated at each time step. The uncertainty can then be calculated w.r.t these estimated distributions 
+
+The high-level intuition of the Track-and-Stop algorithm is as follows:
+
+\begin{itemize}
+    \item While there is a reasonable probability multiple arms could be optimal:
+    \begin{itemize}
+        \item If the arm that has been selected least often hasn't been selected at least $\sqrt{t}$ times:
+        \begin{itemize}
+            \item Choose this arm
+        \end{itemize}
+        \item Otherwise:
+        \begin{itemize}
+            \item Choose arm i that maximizes (t * average) - no. times selected
+        \end{itemize}
+    \end{itemize}
+    \item Set the selection rule to the arm with the highest mean at this time-step, and set the stopping time
+\end{itemize}
+
+The pseudo-code for the Track-and-Stop algorithm is defined as follows:
+
+\pseudobox{%
+    \KwIn{Confidence $\failureProb$, $\beta_t(\failureProb)$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    t = 0\newline
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Choose arm $A_{t+1} \leftarrow i$
+    }
+    \BlankLine
+    \While{$Z_t < \beta_t(\failureProb)$}{
+        \If{$\arg\min_{i \in [K]}T_i(t) \leq \sqrt{t}$}{
+            Choose arm $A_{t+1} \leftarrow \arg\min_{i \in [K]} T_i(t)$;
+        }
+        \Else{
+            Choose arm $A_{t+1} \leftarrow \arg\max_{i \in [K]} (t * \empiricalMeanReward{a}{t} - T_i(t))$;
+        }
+     }
+    return selection rule $\selectionRule = i^*(\hat{v}(t))$, stopping time $\stoppingTime = t$\newline
+
+}{Track-And-Stop Algorithm}
+
+\newcommand{\defineZedTee}[1]{\frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans(#1))}
+\sum_{i=1}^k T_i(#1) \left( \vectorBanditMeans_i(#1) - \aDifBandit_i(#1) \right)^2}
+
+\url{https://docs.scipy.org/doc/scipy/tutorial/optimize.html}
+
+We define $Z_t = \defineZedTee{t}$ and $\beta_t(\failureProb)$ to be some function that determines stopping time
+
+We now have to show the Track-And-Stop algorithm is sound\ref{def:soundess} with $\failureProb$, given some stopping time $\stoppingTime = \beta_t(\failureProb)$, which we do as follows:
+
+% We firstly need to assume \maxMeanArm
+
+\ognote{Complete rubbish - needs rewriting}
+arbitrarily arm $i=1$ is best, in that $\armDistribution{1} = \maxArmDistribution$. This naturally means we want the best arm to be picked constantly after the stopping time, so $\maxMeanArm{t} = 1$ for $\stoppingTime + 1 \leq t < \infty$, since we must account for that the algorithm stops at time $\stoppingTime$, then queries afterwards
+\ognote{Complete rubbish - needs rewriting}
+
+Now, we note that:
+\begin{align*}
+&\mathrel{\phantom{=}}\left\{\textbf{bandits which disagree with the empirical distribution over what the best arm is} \right\} \\
+&\mathrel{\phantom{=}}\subseteq \left\{\textbf{bandits where the algorithm stops at our stopping time}\right\}
+\end{align*}
+
+Which leads to:
+$$\left\{ v \in \banditSpace_{alt}(\maxMeanArm{{\stoppingTime}}) \right\} \subseteq \left\{ Z_{\stoppingTime} < \beta_{\stoppingTime}(\failureProb)\right\}$$
+
+$$\left\{ 1 \notin \maxMeanArm{{\stoppingTime}} \right\} = \left\{ v \in \banditSpace_{alt}(\maxMeanArm{{\stoppingTime}}) \right\} \subseteq \left\{ \defineZedTee{\stoppingTime} < \beta_{\stoppingTime}(\failureProb)\right\}$$
+
+So our target equation is the following:
+
+\label{tar:track-and-stop}
+$$\Prob( 1 \notin \maxMeanArm{{\stoppingTime}}) \leq \Prob\left( \defineZedTee{\stoppingTime} \geq \beta_{\stoppingTime}(\failureProb)\right) \leq \failureProb$$
+
+\seperator
+
+Let us define:
+
+$$S_{i_s} := \frac{s}{2}(\vectorBanditMeans_{i}(\stoppingTime^{-1}(s)) - \armPopulationMean{i})^2 \textbf{ where } \stoppingTime^{-1}(s) := min \{ t \in \naturals : \stoppingTime_{i}(t) = s \}$$
+
+By Lemma\ref{lem:upperBoundSeq}:
+$$\implies \Prob(\exists s \in \naturals : S_{i_s} \geq \log{s(s+1)} + \log{\frac{1}{\failureProb}}) \leq \failureProb$$
+
+If we let $g(s) = \log{\failureProb(\failureProb + 1)}$, we meed the conditions of Lemma\ref{lem:increasingSeqUpper}, so:
+
+$$\implies \Prob \left(\exists (s_i)_{i=1}^{k} : \sum_{i=1}^{k}S_{i_s} \geq k ((\log{\sum_{i=1}}s_i)(\log{\sum_{i=1}}s_i + 1)) + x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+
+$$\implies \Prob \left(\exists t \in \naturals : \frac{1}{2}\sum_{i=1}^{k}T_i(t)(\vectorBanditMeans_{i}(t) - \aDifBandit_{i}(t))^2 \geq k ((\log{t})(\log{t + 1})) + x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+
+We know that if $t \in \naturals$ exists, then the statement must also hold for $\stoppingTime \geq t$:
+
+$$\implies \Prob \left(\frac{1}{2}\sum_{i=1}^{k} T_i(\stoppingTime)(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq k ((\log{\stoppingTime})(\log{\stoppingTime + 1})) + x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+
+Now, we get to the point where we must define $\beta_{t}(s)$. If we say $\beta_{t}(s) := k * log\left(t(t+1)\right) + \failureProb^{-1}(\failureProb)$ with $\failureProb(s) := \left(\frac{x}{k}\right)^k e^{k-s}$, then we have $\failureProb^{-1}(\failureProb) = x$ and $\failureProb(x) = \failureProb$, so:
+
+$$\implies \Prob \left(\frac{1}{2}\sum_{i=1}^{k} T_i(\stoppingTime)(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq \beta_{\stoppingTime}(s) \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+
+$$\implies \Prob \left(\frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans(\stoppingTime))}\sum_{i=1}^{k} T_i(\stoppingTime)(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq \beta_{\stoppingTime}(s) \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+
+We have now met the target\ref{tar:track-and-stop} equation, so we have:
+
+$$\beta_{t}(s) = k * log\left(t(t+1)\right) + x$$
+$$Z_{t}(\vectorBanditMeans) = \frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans)}\left(\sum_{i=1}^{k} T_i(t)(\vectorBanditMeans_{i}(t) - \aDifBandit_{i})^2\right)$$
+$$\epsilon = \left(\frac{x}{k}\right)^k e^{k-x}$$
+
+Perhaps the simplest way will be to use the expression in [33.4a in Lattimore book] and re-parameterise $\alpha$ as a vector $\beta_1,...,\beta_K \in \R $ via $ \alpha_i = e^{\beta_i}/(\sum_j e^{\beta_j})$. This way you don't need any additional constraints to encode probability vectors.
+
+Let $\alpha_i = \frac{e^{\beta_i}}{c}$ with $c := \sum_j e^{\beta_j}$
+
+Using that, and that $\sigma_i = 1 \forall i$:
+$$\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans)}\left(\sum_{i=1}^{k} \alpha_i D(\vectorBanditMeans_{i}(t), \aDifBandit_{i})\right) = \frac{1}{2}\min_{i>1}\frac{\alpha_1 \alpha_i \gap{i}^2}{\alpha_1 \sigma_i^2 + \alpha_i \sigma_1^2} = \frac{1}{2}\min_{i>1}\frac{\gap{i}^2}{c} \frac{e^{\beta_1} e^{\beta_i}}{e^{\beta_1} + e^{\beta_i}}
+$$
+
+With $J(\beta):=\sum_{j=1}^K e^{\beta_j}$ we can define:
+\[F(\beta):= \frac{1}{2}\min_{i>1}\frac{\alpha_1 \alpha_i \gap{i}^2}{\alpha_1 \sigma_i^2 + \alpha_i \sigma_1^2}=\frac{1}{2J(\beta)}\min_{i>1}   \frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\]
+
+This is quite difficult to evaluate, since the minimisation may result in the values of $e^{-\beta_i}$ getting large enough such that the whole expression gets so small it \textquotedblleft rounds\textquotedblright\space down to zero, which isn't very helpful. Therefore, we can take to log and minimise over that
+
+So we have:
+\begin{align}
+\log(F(\beta)) =\log\left(\min_{i>1}\frac{\alpha_1 \alpha_i \gap{i}^2}{\alpha_1 \sigma_i^2 + \alpha_i \sigma_1^2}\right)
+=\log\left(\frac{1}{2J(\beta)}\min_{i>1}   \frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right) \\
+=\log\left(\frac{1}{2J(\beta)}\right) + \log\left(\min_{i>1} \frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right) \\
+=-\log\left(2\right) -\log\left(J(\beta)\right) + \min_{i>1} \log\left(\frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right) \\
+\log(F(\beta))=-\log\left(2\right) -\log\left(J(\beta)\right) + \min_{i>1} \left(2\log\left(\Delta_i\right) -\log\left({\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right)\right)
+\end{align}
+
+Note, when minimising this, the \textquotedblleft$-\log\left(2\right)$\textquotedblright\space makes no difference, so we can exclude it for those purposes. So, we have:
+
+\begin{align}
+Z_{t}(\vectorBanditMeans) = \frac{1}{2}F(\beta)
+\implies Z_{t}(\vectorBanditMeans) = \frac{1}{2}e^{\log(F(\beta)) }
+= \frac{1}{2}e^{-\log\left(2\right) -\log\left(J(\beta)\right) + \min_{i>1} \left(2\log\left(\Delta_i\right) -\log\left({\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right)\right)}
+\end{align}
+
+\lstset{language=Python, % set programming language basicstyle=\small\ttfamily, % basic font style stringstyle=\color{DarkGreen}, otherkeywords={0,1,2,3,4,5,6,7,8,9}, keywordstyle=\color{Blue}, % keyword style commentstyle=\ttfamily \color{DarkGreen}, numbers=left, % display line numbers on left numberstyle=\ttfamily\color{Gray}\footnotesize, % line numbers breaklines=true, breakatwhitespace=true, }
+
+\newpage
+
+\begin{lstlisting}[language=Python]
+# Put the code 'ere
+\end{lstlisting}

@@ -164,3 +164,25 @@ Hence, using the chain rule:
 
 
 \end{proof}
+
+
+\label{lem:upperBoundSeq}
+\begin{lemma}
+Let $(X_t)_{t=1}^\infty$ be a sequence of independent Gaussian random variables with mean $\mu$ and unit variance. Let $\hat{\mu}_n = \frac{1}{n} \sum_{t=1}^n X_t$. Then, for any $\delta > 0$:
+$$
+\Prob\left(\exists n \in \mathbb{N}^+ \text{ st. } \frac{n}{2} (\hat{\mu}_n - \mu)^2 \geq \log\left(\frac{1}{\delta}\right) + \log(n(n + 1))\right) \leq \delta.
+$$
+\end{lemma}
+
+\ognote{Can't use prop for some reason}
+\label{lem:increasingSeqUpper}
+\begin{lemma}
+Let $g : \mathbb{N} \to \mathbb{R}$ be increasing, and for each $i \in [k]$, let $S_{i_1}, S_{i_2}, \ldots$ be an infinite sequence of random variables such that for all $\delta \in (0, 1)$,
+$$
+P \left(\exists s \in \mathbb{N} : S_{is} \geq g(s) + \log\left(\frac{1}{\delta}\right)\right) \leq \delta.
+$$
+Then, provided that $(S_i)_{i=1}^k$ are independent and $x \geq 0$,
+\[
+P \left(\exists s \in \mathbb{N}^k : \sum_{i=1}^k S_{is_i} \geq kg \left(\sum_{i=1}^k s_i\right) + x\right) \leq \left(\frac{x}{k}\right)^k e^{k-x}.
+\]
+\end{lemma}
