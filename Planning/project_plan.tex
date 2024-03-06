@@ -38,55 +38,6 @@
 % Packages for macros
 \usepackage{etoolbox}
 
-% ----- Layout parameters -----
-
-% Page Layout
-\setlength{\textheight}{23.4cm}
-\setlength{\topmargin}{-0.15in}
-\setlength{\footskip}{36pt}
-
-% ----- Layout commands -----
-
-% Colors 
-\newcommand{\teal}[1]{{\color{teal}#1}}
-\newcommand{\red}[1]{{\color{red}#1}}
-\newcommand{\orange}[1]{{\color{orange}#1}}
-\newcommand{\green}[1]{{\color{green}#1}}
-\newcommand{\purple}[1]{{\color{purple}#1}}
-\newcommand{\blue}[1]{{\color{blue}#1}}
-
-\newcommand{\purplesout}[1]{{\color{purple} \sout{#1}}}
-
-% ----- Mathematics -----
-
-% Mathematics environments
-\newtheorem{theorem}{Theorem}
-\newtheorem{example}{Example}
-\newtheorem{remark}{Remark}
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{assumption}{Assumption}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{defn}[theorem]{Definition}
-\newtheorem{prop}[theorem]{Proposition}
-\newtheorem{conj}[theorem]{Conjecture}
-
-% Mathematics format/layout
-\def\mathbi#1{\textbf{\em #1}}
-
-
-% Common symbols and operators
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\R}{\mathbb{R}}
-\newcommand{\Z}{\mathbb{Z}}
-\newcommand{\arginf}{\text{arginf}}
-\newcommand{\argsup}{\text{argsup}}
-\DeclareMathOperator*{\argmin}{argmin}
-\DeclareMathOperator*{\argmax}{argmax}
-\DeclareMathOperator*{\sargmin}{sargmin}
-\DeclareMathOperator*{\sargmax}{sargmax}
-\newcommand{\essinf}{\text{essinf}}
-
-
 
 % ----- Publication parameters -----
 \title{Project plan: Pure exploration for combinatorial bandits with non-stationary}
@@ -103,6 +54,7 @@
  \maketitle
 
 \begin{enumerate}
+    \item Write up foundation knowledge
     \item Understanding the basic pure exploration setting (i.e. understanding theory and methods from Lattimore chapter on pure exploration) and write up  main ideas and theory in your own words;
     \item Include some simulations - comparing with uniforming exploration
     \item Understand: \url{http://www.chenshouyuan.com/papers/cpe-full-cr.pdf} (and write up upper bounds in paper), discuss application to shortest path (i.e. second half of example 2)

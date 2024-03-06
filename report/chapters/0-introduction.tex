@@ -7,9 +7,13 @@ For the purpose of this paper, we define the following:
 
 We will consider a multi-armed bandit problem with $K$ arms and a time horizon $T$, where $K$, $N \in \N$.
 
-A MAB with $K$ arms with distributions $\armDistributionVect = (\armDistribution{1}, \dots , \armDistribution{K})$, such that arm $i$ has distribution $\armDistribution{k}$.
+A MAB has $K$ arms with distributions $\armDistributionVect = (\armDistribution{1}, \dots , \armDistribution{K}) \in \banditSpace$, such that arm $i$ has distribution $\armDistribution{k}$
 
-Let $\armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions, with $\maxPopulationMean \coloneqq \max_{k \in [K]} \armPopulationMean{k}$. We will also define the ''gap" $\gap{i} \coloneqq \maxPopulationMean - \armPopulationMean{i}$
+We define $\banditSpace_{alt}(P) = \{ P^{\prime} \in \banditSpace | \}$ \ognote{todo}
+
+Let $\armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions, with $\maxPopulationMean \coloneqq \max_{k \in [K]} \armPopulationMean{k}$, and $\maxArmDistribution \coloneqq  \arg\max\limits_{k \in [K]}{\armPopulationMean{k}}$
+
+We will also define the ''gap" $\gap{i} \coloneqq \maxPopulationMean - \armPopulationMean{i}$
 
 
 For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. We shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy
@@ -39,6 +43,7 @@ Further more, define $\empiricalMeanReward{a}{t}$ to be the average reward for a
 \begin{align*}
 \empiricalMeanReward{a}{t}:=\frac{\sum_{i=1}^{t} \mathbb{I}(\action{i} = a)\cdot \reward{t-1}{a}}{\sum_{i=1}^{t} \mathbb{I}(\action{i} = a)}.
 \end{align*}
+So we can define $\maxMeanArm{t} = \arg\max\limits_{k \in [K]}{\empiricalMeanReward{k}{t}}$ to be the arm(s) with the highest observed mean at time t, and 
 
 Finally, given a failure probability $\delta \in (0,1)$, we let $\ucb{a}{t}{\delta}$ denote the upper confidence bound on $\armPopulationMean{a}$ based on the first $t$ rounds,
 \begin{align*}
