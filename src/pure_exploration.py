@@ -2,15 +2,25 @@ import multiprocessing
 import random
 from numpy import cumsum
 
-import Agents
+from Agents import Uniform, TrackAndStop
 from ArmState import ArmState
-from experimental import Ripple, Cliff
 import utils
 
 
 def run_through(agent, arm_state, time_horizon):
-    for _ in range(time_horizon):
-        chosen_arm = agent.choose_lever(arm_state)
+    toggle_stop = False
+    for i in range(time_horizon):
+        #print(f"Step {i}")
+        if toggle_stop:
+            chosen_arm = agent.do_pass(arm_state)
+        else:
+            chosen_arm = agent.choose_lever(arm_state)
+
+            if agent.do_stop(arm_state):
+                print("Stopping...")
+                print(f"Best arm = {agent.get_result(arm_state)}")
+                toggle_stop = True
+
         arm_state.pull_arm(chosen_arm)
 
     saved_regrets = arm_state.regrets
@@ -25,7 +35,8 @@ def run_through(agent, arm_state, time_horizon):
 def run_trials(agent, arm_state, time_horizon, num_trials):
     results = []
 
-    for _ in range(num_trials):
+    for i in range(num_trials):
+        print(f"Trial: {i}")
         trial_results = run_through(agent, arm_state, time_horizon)
 
         cumulative_results = cumsum(trial_results)
@@ -52,6 +63,7 @@ def run_samples_helper(args):
     return run_trials(*args)
 
 
+# NOT CHANGED!
 def run_analysis_with_multiprocessing(arm_state, agents_list, time_horizon, num_trials):
     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
 
@@ -70,8 +82,11 @@ def perform_test(probabilities_list, agents_list, time_horizon, num_trials):
 
     arm_state = ArmState(probabilities_list)
 
-    do_profile: bool = True
+    do_profile: bool = False
     multiprocessing_mode = 0
+
+    if multiprocessing_mode != 0:
+        print("NOT UPDATED FOR PURE EXPLORATION!")
 
     analyse_modes = [
         run_analysis_without_multiprocessing,
@@ -118,14 +133,12 @@ if __name__ == "__main__":
         [1 / 15300, 1 / 649739, 1 / 11500],
     ]
 
-    time_horizon = 400
-    num_trials = 100
+    time_horizon = 1000
+    num_trials = 1
 
     for probabilities in testing_probabilities:
         agents = [
-            Cliff(takeover=0.5),
-            Ripple(ArmState(probabilities), limit_down=0.05),
-            Agents.Ucb(),
-            Agents.BernTS(),
+            Uniform(),
+            TrackAndStop(),
         ]
         perform_test(probabilities, agents, time_horizon, num_trials)

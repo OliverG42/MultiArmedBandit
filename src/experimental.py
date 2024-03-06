@@ -15,7 +15,7 @@ def plot_prob_success(wins, losses, colour, identifier=None):
         identifier = colour
 
     precision = 4
-    precision = 10 ** precision
+    precision = 10**precision
 
     plt.plot(
         [x / precision for x in range(0, precision)],
@@ -43,7 +43,7 @@ def bell_curve(x, wins, losses):
         else:
             first = 0
     else:
-        first = decimal_x ** decimal_wins
+        first = decimal_x**decimal_wins
 
     # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
     if (1 - decimal_x) == 0:
@@ -58,7 +58,7 @@ def bell_curve(x, wins, losses):
 
 
 def bell_curve_vectorized(x, wins, losses):
-    first = np.where(x == 0, np.where(wins == 0, 1, 0), x ** wins)
+    first = np.where(x == 0, np.where(wins == 0, 1, 0), x**wins)
     second = np.where((1 - x) == 0, np.where(losses == 0, 1, 0), (1 - x) ** losses)
 
     return first * second
@@ -82,7 +82,8 @@ class Ripple(Agent):
 
         self.intersection_points = [
             self._findIntersection(
-                deepcopy(the_arm_state.successes[i]), deepcopy(the_arm_state.failures[i])
+                deepcopy(the_arm_state.successes[i]),
+                deepcopy(the_arm_state.failures[i]),
             )
             for i in range(0, self.num_arms)
         ]
@@ -130,15 +131,25 @@ class Rag(Agent):
     # Add a dynamic cache from functools
     @functools.lru_cache(maxsize=None)
     def expectedRewards(self, successes, failures):
-        normalisation_factor = 1 / lazy_integration(bell_curve_vectorized, successes, failures)
+        normalisation_factor = 1 / lazy_integration(
+            bell_curve_vectorized, successes, failures
+        )
         x_values = np.arange(0, 1.001, 0.001)
-        integrand = x_values * bell_curve_vectorized(x_values, successes, failures) * normalisation_factor
+        integrand = (
+            x_values
+            * bell_curve_vectorized(x_values, successes, failures)
+            * normalisation_factor
+        )
         result = np.trapz(integrand, dx=0.001)
         return result
 
     def choose_lever(self, the_arm_state):
         expectedNormalisedRewards = np.array(
-            [self.expectedRewards(s, f) for (s, f) in zip(the_arm_state.successes, the_arm_state.failures)])
+            [
+                self.expectedRewards(s, f)
+                for (s, f) in zip(the_arm_state.successes, the_arm_state.failures)
+            ]
+        )
         result = np.argmax(expectedNormalisedRewards)
 
         return result
@@ -155,11 +166,16 @@ class Cliff(Agent):
         greedy_success_rate = the_arm_state.success_rates[greedy_arm]
         result = greedy_arm
 
-        for arm_index, (successes, failures) in enumerate(zip(the_arm_state.successes, the_arm_state.failures)):
+        for arm_index, (successes, failures) in enumerate(
+            zip(the_arm_state.successes, the_arm_state.failures)
+        ):
             if arm_index == greedy_arm:
                 continue
 
-            if prob_success_rate(greedy_success_rate, successes, failures) > self.takeover:
+            if (
+                prob_success_rate(greedy_success_rate, successes, failures)
+                > self.takeover
+            ):
                 result = arm_index
 
         return result

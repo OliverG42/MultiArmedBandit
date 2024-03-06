@@ -27,7 +27,7 @@ def lazy_integration(function, *args):
 
 # A testing function - square
 def square_function(x):
-    return x ** 2
+    return x**2
 
 
 if __name__ == "__main__":
@@ -42,10 +42,14 @@ if __name__ == "__main__":
     integration_results = []
 
     for name, integration_method in integration_methods:
-        start_time = timeit.timeit(lambda: integration_method(square_function), number=intensity)
+        start_time = timeit.timeit(
+            lambda: integration_method(square_function), number=intensity
+        )
         result = integration_method(square_function)
 
-        print(f"Time taken for integration using {name} method: {start_time:.8f} seconds")
+        print(
+            f"Time taken for integration using {name} method: {start_time:.8f} seconds"
+        )
 
         integration_results.append((name, result))
 
@@ -53,8 +57,9 @@ if __name__ == "__main__":
     # Since np.isclose was being difficult and throwing errors due to integration_results' structure
     def are_results_close(results, rtol):
         reference_result = results[0][1]
-        return all(abs(a_result - reference_result) <= rtol for (_, a_result) in results)
-
+        return all(
+            abs(a_result - reference_result) <= rtol for (_, a_result) in results
+        )
 
     # Check if the results are not close to each other
     if not are_results_close(integration_results, is_close_error):

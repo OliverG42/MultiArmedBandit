@@ -36,7 +36,6 @@ class ColourSink:
             max_distance = -1
             max_distance_colour = None
 
-
             for colour in self.all_colours:
                 distance = self._calculate_colour_distance(colour)
                 if distance > max_distance:

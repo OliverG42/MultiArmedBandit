@@ -2,6 +2,7 @@ import multiprocessing
 import time
 
 import dask.bag as db
+
 # noinspection PyProtectedMember
 from pathos.multiprocessing import ProcessingPool as PathosProcessingPool
 
@@ -53,7 +54,15 @@ def process_with_pool(pool_method, the_size, func):
 
 if __name__ == "__main__":
     size = 400
-    pool_methods = ["map", "starmap", "apply", "imap", "imap_unordered", "pathos", "dask_1"]
+    pool_methods = [
+        "map",
+        "starmap",
+        "apply",
+        "imap",
+        "imap_unordered",
+        "pathos",
+        "dask_1",
+    ]
 
     for method in pool_methods:
         result, elapsed_time = process_with_pool(method, size, weird_function)
