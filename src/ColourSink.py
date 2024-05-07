@@ -8,16 +8,20 @@ import numpy as np
 
 # Is this class overkill? Absolutely yes!
 class ColourSink:
-    def __init__(self):
+    def __init__(self, seed=None):
+        if seed is not None:
+            random.seed(seed)
         self.all_colours = [
-            color
-            for color in mcolours.CSS4_COLORS.keys()
+            colour
+            for colour in mcolours.CSS4_COLORS.keys()
             # Exclude dark colours
-            if np.array(mcolours.to_rgb(color)).max(initial=0) > 0.5
+            if np.array(mcolours.to_rgb(colour)).max(initial=0) > 0.5
             # Exclude boring grey colors
-            and not np.allclose(mcolours.to_rgb(color)[:3], mcolours.to_rgb("grey")[:3])
+            and not np.allclose(
+                mcolours.to_rgb(colour)[:3], mcolours.to_rgb("grey")[:3]
+            )
             # Exclude very light colors
-            and np.array(mcolours.to_rgb(color)).min(initial=1) < 0.6
+            and np.array(mcolours.to_rgb(colour)).min(initial=1) < 0.2
         ]
         self.selected_colours = []
 

@@ -1,10 +1,12 @@
+import functools
 import math
+from copy import deepcopy
 from random import randint
 
 import numpy as np
 
-from linear_optimisation_testing import minimise_beta, get_minimising_beta_data, determine_result, \
-    log_objective_function
+from MultiArmedBandit.src.misc.experimental import prob_success_rate
+from MultiArmedBandit.src.testing.linear_optimisation_testing import minimise_beta
 
 
 class Agent:
@@ -48,30 +50,57 @@ class BernGreedy(Agent):
 
 
 class BernTS(Agent):
-    def choose_lever(self, arm_state, alpha_prior=1, beta_prior=1):
+    def __init__(self, name=None, alpha_prior=None, beta_prior=None):
+        super().__init__()
+        self._initialize()
+        if name is not None:
+            self.name = name
+        self.num_arms = None
+        self.prior_init = False
+
+        if (alpha_prior is not None) and (beta_prior is not None):
+            self.alpha_prior = alpha_prior
+            self.beta_prior = beta_prior
+
+            self.prior_init = True
+
+            self.num_arms = len(beta_prior)
+
+    def choose_lever(self, arm_state):
+        if not self.prior_init:
+            self.alpha_prior = np.ones(arm_state.num_arms)
+            self.beta_prior = np.ones(arm_state.num_arms)
+
         samples = np.random.beta(
-            arm_state.successes + alpha_prior, arm_state.failures + beta_prior
+            arm_state.successes + self.alpha_prior + 1e-8,
+            arm_state.failures + self.beta_prior + 1e-8,
         )
         return np.argmax(samples)
 
 
+# Geometrically decreases the probability to do something random
+def geometric_epsilon(arm_state, epsilon):
+    return math.pow(epsilon, arm_state.total_pulls + 1)
+
+
 class EpsilonGreedy(Agent):
-    def __init__(self, epsilon=0.95):
+    def __init__(self, name, epsilon=0.95, epsilon_function=geometric_epsilon):
         super().__init__()
         self._initialize()
+        if name is None:
+            self.name = f"epsilon = {epsilon}"
+        else:
+            self.name = name
         self.epsilon = epsilon
-        self.CONST_epsilon = epsilon
+        self.epsilon_function = epsilon_function
 
     def choose_lever(self, arm_state):
-        if np.random.random() < self.epsilon:
+        if np.random.random() < self.epsilon_function(arm_state, self.epsilon):
             # Choose at random
             chosen_arm = np.random.randint(arm_state.num_arms)
         else:
             # Choose greedily
             chosen_arm = np.argmax(arm_state.success_rates)
-
-        # Slowly decrease the probability to do something random
-        self.epsilon *= self.CONST_epsilon
 
         return chosen_arm
 
@@ -86,16 +115,16 @@ class Ucb(Agent):
         exploitation_factor = arm_state.success_rates
 
         exploration_factor = (
-                1
-                / 2
-                * np.sqrt(
-            (np.log(arm_state.total_pulls + 1))
-            / np.where(
-                arm_state.arm_pulls == 0,
-                np.ones(arm_state.num_arms),
-                arm_state.arm_pulls,
+            1
+            / 2
+            * np.sqrt(
+                (np.log(arm_state.total_pulls + 1))
+                / np.where(
+                    arm_state.arm_pulls == 0,
+                    np.ones(arm_state.num_arms),
+                    arm_state.arm_pulls,
+                )
             )
-        )
         )
 
         confidence_bounds = exploitation_factor + exploration_factor
@@ -117,6 +146,57 @@ class Softmax(Agent):
         return np.random.choice(len(arm_state.success_rates), p=probabilities)
 
 
+class Ripple(Agent):
+    def __init__(self, the_arm_state, limit_down=0.01):
+        super().__init__()
+        self._initialize()
+        self.name = self.name + " " + str(limit_down)
+        self.num_arms = the_arm_state.num_arms
+        self.limit_down = limit_down
+        self.search_increment = 0.001
+
+        self.intersection_points = [
+            self._findIntersection(
+                deepcopy(the_arm_state.successes[i]),
+                deepcopy(the_arm_state.failures[i]),
+            )
+            for i in range(0, self.num_arms)
+        ]
+        self.arm_pulls_memory = deepcopy(the_arm_state.arm_pulls)
+
+    # Add a dynamic cache from functools
+    @functools.lru_cache(maxsize=None)
+    def _findIntersection(self, successes, failures):
+        upper = 1
+        lower = successes / (successes + failures) if successes + failures != 0 else 1
+
+        accuracy = 1e-4
+
+        while upper - lower > accuracy:
+            middle = (upper + lower) / 2
+            success_rate = prob_success_rate(middle, successes, failures)
+
+            if success_rate < self.limit_down:
+                upper = middle
+            else:
+                lower = middle
+
+        return lower
+
+    def choose_lever(self, the_arm_state):
+        # Find which intersection point(s) has changed
+        for i in range(0, self.num_arms):
+            if self.arm_pulls_memory[i] != the_arm_state.arm_pulls[i]:
+                # Change the intersection point
+                self.intersection_points[i] = self._findIntersection(
+                    the_arm_state.successes[i], the_arm_state.failures[i]
+                )
+
+        result = np.argmax(self.intersection_points)
+
+        return result
+
+
 # ----------------------------------------------------------------------------------------------
 # Pure exploration agents
 
@@ -130,8 +210,14 @@ class PureExplorationAgent(Agent):
 
 
 class Uniform(Agent):
+    def __init__(self):
+        super().__init__()
+        self.last_arm_index = 0
+
     def choose_lever(self, arm_state):
-        return np.argmax(arm_state.success_rates)
+        chosen_arm = self.last_arm_index
+        self.last_arm_index = (self.last_arm_index + 1) % arm_state.num_arms
+        return chosen_arm
 
     # The Uniform Agent never stops on its own!
     def do_stop(self, arm_state):
@@ -142,7 +228,7 @@ class Uniform(Agent):
 
 
 class TrackAndStop(Agent):
-    def __init__(self, failure_probability=0.1):
+    def __init__(self, failure_probability=0.01):
         super().__init__()
         self._initialize()
         self.failure_probability = failure_probability
@@ -152,24 +238,18 @@ class TrackAndStop(Agent):
         max_success_rate = np.max(arm_state.success_rates)
         gaps = np.array([max_success_rate - sr for sr in arm_state.success_rates])
 
-        beta_result, min_value = minimise_beta(gaps, beta_prior=self.previous_beta)
+        beta_result, min_value = minimise_beta(gaps, previous_beta=self.previous_beta)
 
         self.previous_beta = beta_result
 
-        exponent = -math.log(2) + log_objective_function(beta_result, gaps, do_penalty=False)
-
-        print(f"constant: {math.log(2)}")
-        print(f"log_function: {log_objective_function(beta_result, gaps, do_penalty=False)}")
-        print(f"exponent: {exponent}")
-        print(f"returns: {0.5 * np.exp(exponent)}\n")
-
-        return 0.5 * np.exp(exponent)
+        return (
+            (arm_state.total_pulls + 1) * min_value / (2 * np.sum(np.exp(beta_result)))
+        )
 
     def _bt(self, arm_state):
         k = arm_state.num_arms
         t = arm_state.total_pulls + 1
-        # TODO Correct value for x?
-        x = 1/math.log(self.failure_probability)
+        x = 1 / math.log(self.failure_probability)
         return k * math.log(t * (t + 1)) + x
 
     def choose_lever(self, arm_state):

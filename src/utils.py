@@ -8,11 +8,11 @@ from matplotlib import pyplot as plt
 from ColourSink import ColourSink
 
 
-def plot_graph(data, num_trials):
+def plot_graph(data, num_trials, title=None, seed=None):
     error_bar_interval = int(num_trials / 10)
     plt.figure(figsize=(10, 6))
 
-    colour_sink = ColourSink()
+    colour_sink = ColourSink(seed)
 
     colours = colour_sink.get_colour(num_colours=len(data))
 
@@ -58,7 +58,7 @@ def plot_graph(data, num_trials):
                 [x - size, x + size], [y - err, y - err], color=colour, linewidth=1
             )  # Bottom line
 
-        offset += 1
+        offset += 5
 
     # Set the x-axis and y-axis limits with some padding
     # This prevents the error bars from protruding into <0, and the y-axis not hitting (0, 0)
@@ -67,6 +67,8 @@ def plot_graph(data, num_trials):
 
     plt.xlabel("Trials")
     plt.ylabel("Cumulative Regret")
+    if title is not None:
+        plt.title(title, wrap=True)
     plt.legend()
     plt.show()
 

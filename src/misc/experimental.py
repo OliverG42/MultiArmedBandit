@@ -1,5 +1,4 @@
 import functools
-from copy import deepcopy
 from decimal import Decimal, getcontext
 
 import numpy as np
@@ -68,58 +67,10 @@ def prob_success_rate(x, wins, losses):
     most_probable = wins / (wins + losses) if wins + losses != 0 else 1
 
     # Normalise the result
+    denominator = bell_curve(most_probable, wins, losses)
+    if denominator == 0:
+        return 0
     return bell_curve(x, wins, losses) / bell_curve(most_probable, wins, losses)
-
-
-class Ripple(Agent):
-    def __init__(self, the_arm_state, limit_down=0.01):
-        super().__init__()
-        self._initialize()
-        self.name = self.name + " " + str(limit_down)
-        self.num_arms = the_arm_state.num_arms
-        self.limit_down = limit_down
-        self.search_increment = 0.001
-
-        self.intersection_points = [
-            self._findIntersection(
-                deepcopy(the_arm_state.successes[i]),
-                deepcopy(the_arm_state.failures[i]),
-            )
-            for i in range(0, self.num_arms)
-        ]
-        self.arm_pulls_memory = deepcopy(the_arm_state.arm_pulls)
-
-    # Add a dynamic cache from functools
-    @functools.lru_cache(maxsize=None)
-    def _findIntersection(self, successes, failures):
-        upper = 1
-        lower = successes / (successes + failures) if successes + failures != 0 else 1
-
-        accuracy = 1e-2
-
-        while upper - lower > accuracy:
-            middle = (upper + lower) / 2
-            success_rate = prob_success_rate(middle, successes, failures)
-
-            if success_rate < self.limit_down:
-                upper = middle
-            else:
-                lower = middle
-
-        return lower
-
-    def choose_lever(self, the_arm_state):
-        # Find which intersection point(s) has changed
-        for i in range(0, self.num_arms):
-            if self.arm_pulls_memory[i] != the_arm_state.arm_pulls[i]:
-                # Change the intersection point
-                self.intersection_points[i] = self._findIntersection(
-                    the_arm_state.successes[i], the_arm_state.failures[i]
-                )
-
-        result = np.argmax(self.intersection_points)
-
-        return result
 
 
 # Stands for Really Accurate Gambler
@@ -187,10 +138,12 @@ def do_graph(wins, losses):
     plt.subplots_adjust(left=0.2)
     plt.ylabel("\u2119(wins,losses | p)", rotation=0, ha="right")
 
-    colours = ["red", "yellow", "green"]
+    colours = ["red", "green", "blue"]
 
     for win, loss, colour in zip(wins, losses, colours):
         plot_prob_success(win, loss, colour=colour, identifier=colours.index(colour))
+
+    plt.axhline(y=0.05, color="black", linestyle="--", label="Tolerance")
 
     plt.legend()
 
@@ -199,9 +152,11 @@ def do_graph(wins, losses):
 
 if __name__ == "__main__":
     arm_state = ArmState([0.5, 0.6, 0.4])
-    arm_state.successes = [5, 3, 4]
-    arm_state.failures = [10, 5, 10]
-    arm_state.success_rates = [0.5, 0.6, 0.4]
+    arm_state.successes = [8, 5, 4]
+    arm_state.failures = [13, 9, 10]
+    arm_state.success_rates = np.array(arm_state.successes) / np.array(
+        arm_state.failures
+    )
 
     rippleAgent = Ripple(arm_state)
     choice = rippleAgent.choose_lever(arm_state)
