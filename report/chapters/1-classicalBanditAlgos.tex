@@ -304,3 +304,77 @@ Thompson Sampling finds a balance between exploration and exploitation, since it
 Thompson Sampling's key advantages are its simplicity and adaptability. It naturally handles uncertainty and adjusts its exploration strategy based on observed data. This adaptability makes it particularly effective when arm success rate distributions may change over time.
 
 However, the algorithm struggles to manage the computational complexity of sampling from complex distributions, especially when dealing with a large number of arms. Also, like other bandit algorithms, Thompson Sampling's performance can be affected by the choice of hyper-parameters (priors). Incorrect choices here can cause the algorithm to produce very unreliable results.\ref{sensitive_priors}
+
+
+\subsubsection{Ripple Sampling}
+\label{sec:ripple}
+
+After exploring all of the above algorithms, I decided to design my own classical bandit algorithm - Ripple. It draws inspiration from established concepts like the UCB, Thompson sampling, and Greedy approaches. From UCB, it adopts the idea of deterministically choosing arms based on confidence bounds. This ensures that decisions are made with a certain level of certainty, maximizing the likelihood of selecting the most promising option. Additionally, Ripple incorporates elements of Thompson sampling by maintaining posterior distributions over the mean of each arm. Moreover, it embraces the Greedy strategy by selecting arms optimistically in each iteration, aiming to maximize potential gains.
+
+The basic idea is that, at each time-step, it picks the arm that's most likely to have reasonable probability of having a high probability of success. This equates to:
+
+$$A_t = \arg\max_{i \in [K]} \sup_{X_i \in \mathbb{R}} \left\{ X_i \suchthat \left| \Pr(\text{Arm } i \text{ has } \textbf{normalised} \text{ mean } X_i) - \rho \right| < \epsilon \right\}
+$$
+
+The two values we have to define are $\rho$ the \textbf{pessimism tolerance} and $\epsilon$ the \textbf{numerical tolerance}. $\rho$ is the probability that we count as reasonable for a potential probability $X_i$, and is chosen somewhat arbitrarily, usually around 0.01. $\epsilon$ is the tolerance between $X_i$ and $\rho$ to determine if they are close enough, and is typically a really small value such as $10^{-6}$.
+
+We also must define a \textbf{normalised mean} - this is the probability that, given the empirical data up time $t$, that the arm has mean $X_i$, scaled across all possible means. When the probability of means is calculated using binomial distributions, we can say:
+
+Let $S_i(t) := \sum_{i=1}^{t} \mathbb{I}(\action{i} = a)\cdot \reward{t-1}{a}$ to be the number of successes for arm i at time t. Then, we can let $x = X_i$, $s = S_i(t)$ and $m = \totalFunction{i}{t}$ for neatness, so we have:
+
+\setlength{\jot}{10pt}
+\begin{align*}
+\bar{\Prob}(x) &= \frac{\Prob(x)}{\Prob(\frac{s}{m})} \\
+&= \frac{\binom{m}{s}x^s (1-x)^{m-s}}{\binom{m}{s}\left(\frac{s}{m}\right)^s \left(1-\frac{s}{m}\right)^{m-s}} \\
+&= \frac{x^s (1-x)^{m-s}}{\left(\frac{s}{m}\right)^s \left(1-\frac{s}{m}\right)^{m-s}}
+\end{align*}
+\setlength{\jot}{8pt}
+
+We can see through both figures below that this outperforms both UCB and BernTS in both scenarios
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=17cm]{report/images/Ripple-Outperforms-BernTS-SS-Modified.png}
+    \caption{Ripple's upper and lower bounds are both better than UCB and BernTS (showing double the time horizon)}
+    \label{fig:ripple-cp}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=17cm]{report/images/Ripple-Outperforms-BernTS-CP.png}
+    \caption{Although Ripple starts off with more cumlative regret, past $\sim$10,000 trials it doesn't accumulate significant regret at all}
+    \label{fig:ripple-cp}
+\end{figure}
+
+The algorithm can be summarized as follows:
+
+\pseudobox{%
+    \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$, pessimism tolerance $\rho$, numerical tolerance $\epsilon$, number of timesteps $\timeHorizon$}
+    \KwOut{Selection strategy}
+    \BlankLine
+    \ForEach{arm $i = 1$ \KwTo $K$}{
+        Initialise success count $S_i \leftarrow 0$\newline
+        Initialise number of plays $M_i \leftarrow 0$
+    }
+
+    \BlankLine
+    \SetKwFunction{normProb}{normProb}
+    \SetKwProg{Fn}{Function}{:}{}
+    \Fn{\normProb{$x, s, m$}}{
+        $a \leftarrow \frac{s}{m}$\;
+        \Return $\frac{x^{s} (1-x)^{m-s}}{a^{s}  (1-a)^{m-s}}$\;
+    }
+    
+    \BlankLine
+    \For{$t = 1,\ldots, \timeHorizon$}{
+        \For{$i \in [K]$}{
+            Use binary search to find $X_i$ so $|\mathrm{normProb}(X_i, S_i, M_i) - \rho| \leq \epsilon$\;
+            }
+        Choose arm $A_t \leftarrow \arg\max_i X_i$\;
+        Receive the reward $R_t$ by pulling arm $A_t$\;
+        $M_i = M_i + 1$\;
+        \If{$R_t = 1$}{
+            $S_i \leftarrow S_i + 1$\;
+        }
+    }
+}{Ripple Algorithm}
