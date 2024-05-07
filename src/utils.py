@@ -1,11 +1,12 @@
 import cProfile
 import pstats
+from decimal import getcontext, Decimal
 
 from numpy import mean, std
 import numpy as np
 from matplotlib import pyplot as plt
 
-from ColourSink import ColourSink
+from MultiArmedBandit.src.classes.ColourSink import ColourSink
 
 
 def plot_graph(data, num_trials, title=None, seed=None):
@@ -94,3 +95,50 @@ def lazy_integration(function, *args, step_size=0.001):
     x_values = np.arange(0, 1 + step_size, step_size)
     result = np.sum(function(x_values, *args)) * step_size
     return result
+
+
+# Essentially doing (x ** wins) * ((1 - x) ** losses), but avoiding errors and very small number rounding
+def bell_curve(x, wins, losses):
+    # Set the precision of Decimal
+    getcontext().prec = 5
+
+    decimal_x = Decimal(x)
+    decimal_wins = Decimal(wins)
+    decimal_losses = Decimal(losses)
+
+    # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
+    if decimal_x == 0:
+        if decimal_wins == 0:
+            first = 1
+        else:
+            first = 0
+    else:
+        first = decimal_x**decimal_wins
+
+    # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
+    if (1 - decimal_x) == 0:
+        if decimal_losses == 0:
+            second = 1
+        else:
+            second = 0
+    else:
+        second = (1 - decimal_x) ** decimal_losses
+
+    return float(first * second)
+
+
+def bell_curve_vectorized(x, wins, losses):
+    first = np.where(x == 0, np.where(wins == 0, 1, 0), x**wins)
+    second = np.where((1 - x) == 0, np.where(losses == 0, 1, 0), (1 - x) ** losses)
+
+    return first * second
+
+
+def prob_success_rate(x, wins, losses):
+    most_probable = wins / (wins + losses) if wins + losses != 0 else 1
+
+    # Normalise the result
+    denominator = bell_curve(most_probable, wins, losses)
+    if denominator == 0:
+        return 0
+    return bell_curve(x, wins, losses) / bell_curve(most_probable, wins, losses)

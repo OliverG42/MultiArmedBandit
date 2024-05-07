@@ -1,7 +1,7 @@
 from numpy import cumsum
 
-from MultiArmedBandit.src.Agents import Uniform, TrackAndStop
-from MultiArmedBandit.src.ArmState import ArmState
+from MultiArmedBandit.src.classes.Agents import Uniform, TrackAndStop
+from MultiArmedBandit.src.classes.ArmState import ArmState
 from MultiArmedBandit.src.utils import plot_graph
 
 

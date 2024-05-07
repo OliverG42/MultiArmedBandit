@@ -3,7 +3,7 @@ import timeit
 
 import numpy as np
 
-from MultiArmedBandit.src.misc.experimental import prob_success_rate
+from experimental import prob_success_rate
 
 limit_down = 0.1
 

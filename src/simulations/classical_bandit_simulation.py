@@ -1,14 +1,10 @@
-import math
 import multiprocessing
-import random
 
-import numpy as np
 from numpy import cumsum
 
 import Agents
 from ArmState import ArmState
-from experimental import Ripple, Cliff
-import utils
+from MultiArmedBandit.src import utils
 
 global graph_title
 
@@ -103,13 +99,16 @@ def perform_test(probabilities_list, agents_list, time_horizon, num_trials):
 
 
 def get_example(ex_type):
+    global graph_title
     if ex_type == 0:
         # Substance Synthesis example
+        graph_title = "Substance Synthesis"
         arm_probabilities = [0.1, 0.15, 0.2, 0.25, 0.85, 0.9]
         time_horizon = 1000
         num_trials = 100
     elif ex_type == 1:
         # Consumer Pricing example
+        graph_title = "Consumer Pricing"
         arm_probabilities = [
             0.02,
             0.03,
@@ -134,6 +133,12 @@ def get_example(ex_type):
         ]
         time_horizon = 100000
         num_trials = 20
+    elif ex_type == 2:
+        # Freestyle example
+        graph_title = "Comparing UCB, BernTS and Ripple against the Substance Synthesis example with double the number of worse arms"
+        arm_probabilities = [0.1, 0.15, 0.2, 0.25, 0.1, 0.15, 0.2, 0.25, 0.85, 0.9]
+        time_horizon = 2000
+        num_trials = 100
     else:
         exit(f"Unknown example type {example_type}")
 
@@ -141,7 +146,7 @@ def get_example(ex_type):
 
 
 if __name__ == "__main__":
-    example_type = 0
+    example_type = 2
 
     probabilities, time_horizon, num_trials = get_example(example_type)
 
@@ -151,8 +156,8 @@ if __name__ == "__main__":
         # Agents.CompletelyRandom(),
         # Agents.EpsilonGreedy(epsilon=0.9999, name="Epsilon Greedy with a Geometric Function"),
         # Agents.EpsilonGreedy(epsilon=0.98, name="Linear Function", epsilon_function=epsilon_linear),
-        # Agents.Ucb(),
-        # Agents.BernTS(),
-        # Ripple(ripple_arm_state),
+        Agents.Ucb(),
+        Agents.BernTS(),
+        Agents.Ripple(ripple_arm_state),
     ]
     perform_test(probabilities, agents, time_horizon, num_trials)

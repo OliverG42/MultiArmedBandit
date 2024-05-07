@@ -5,31 +5,9 @@ from random import randint
 
 import numpy as np
 
-from MultiArmedBandit.src.misc.experimental import prob_success_rate
-from MultiArmedBandit.src.testing.linear_optimisation_testing import minimise_beta
-
-
-class Agent:
-    def __init__(self):
-        self.name = self.__class__.__name__
-        self._initialized = False
-
-    def choose_lever(self, arm_state):
-        raise NotImplementedError("The choose_lever method hasn't been implemented!")
-
-    def __new__(cls, *args, **kwargs):
-        instance = super().__new__(cls)
-        instance._init_args = args
-        instance._init_kwargs = kwargs
-        return instance
-
-    def reset(self):
-        if self._initialized:
-            # noinspection PyArgumentList
-            self.__init__(*self._init_args, **self._init_kwargs)
-
-    def _initialize(self):
-        self._initialized = True
+from Agent import Agent
+from MultiArmedBandit.src.misc.temp import minimise_beta
+from MultiArmedBandit.src.utils import prob_success_rate
 
 
 class BernGreedy(Agent):
@@ -115,16 +93,16 @@ class Ucb(Agent):
         exploitation_factor = arm_state.success_rates
 
         exploration_factor = (
-            1
-            / 2
-            * np.sqrt(
-                (np.log(arm_state.total_pulls + 1))
-                / np.where(
-                    arm_state.arm_pulls == 0,
-                    np.ones(arm_state.num_arms),
-                    arm_state.arm_pulls,
-                )
+                1
+                / 2
+                * np.sqrt(
+            (np.log(arm_state.total_pulls + 1))
+            / np.where(
+                arm_state.arm_pulls == 0,
+                np.ones(arm_state.num_arms),
+                arm_state.arm_pulls,
             )
+        )
         )
 
         confidence_bounds = exploitation_factor + exploration_factor
@@ -243,7 +221,7 @@ class TrackAndStop(Agent):
         self.previous_beta = beta_result
 
         return (
-            (arm_state.total_pulls + 1) * min_value / (2 * np.sum(np.exp(beta_result)))
+                (arm_state.total_pulls + 1) * min_value / (2 * np.sum(np.exp(beta_result)))
         )
 
     def _bt(self, arm_state):

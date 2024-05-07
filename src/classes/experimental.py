@@ -1,12 +1,12 @@
 import functools
-from decimal import Decimal, getcontext
 
 import numpy as np
 from matplotlib import pyplot as plt
 
-from Agents import Agent
+from Agent import Agent
+from Agents import Ripple
 from ArmState import ArmState
-from utils import lazy_integration
+from MultiArmedBandit.src.utils import lazy_integration, prob_success_rate, bell_curve_vectorized
 
 
 def plot_prob_success(wins, losses, colour, identifier=None):
@@ -24,53 +24,6 @@ def plot_prob_success(wins, losses, colour, identifier=None):
         color=colour,
         alpha=1,
     )
-
-
-# Essentially doing (x ** wins) * ((1 - x) ** losses), but avoiding errors and very small number rounding
-def bell_curve(x, wins, losses):
-    # Set the precision of Decimal
-    getcontext().prec = 5
-
-    decimal_x = Decimal(x)
-    decimal_wins = Decimal(wins)
-    decimal_losses = Decimal(losses)
-
-    # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
-    if decimal_x == 0:
-        if decimal_wins == 0:
-            first = 1
-        else:
-            first = 0
-    else:
-        first = decimal_x**decimal_wins
-
-    # Catch cases when calculating 0^0=1 or 0^n=0, which causes Decimal to freak out
-    if (1 - decimal_x) == 0:
-        if decimal_losses == 0:
-            second = 1
-        else:
-            second = 0
-    else:
-        second = (1 - decimal_x) ** decimal_losses
-
-    return float(first * second)
-
-
-def bell_curve_vectorized(x, wins, losses):
-    first = np.where(x == 0, np.where(wins == 0, 1, 0), x**wins)
-    second = np.where((1 - x) == 0, np.where(losses == 0, 1, 0), (1 - x) ** losses)
-
-    return first * second
-
-
-def prob_success_rate(x, wins, losses):
-    most_probable = wins / (wins + losses) if wins + losses != 0 else 1
-
-    # Normalise the result
-    denominator = bell_curve(most_probable, wins, losses)
-    if denominator == 0:
-        return 0
-    return bell_curve(x, wins, losses) / bell_curve(most_probable, wins, losses)
 
 
 # Stands for Really Accurate Gambler
