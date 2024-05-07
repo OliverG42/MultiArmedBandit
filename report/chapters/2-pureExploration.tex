@@ -3,11 +3,35 @@
 
 \section{The Premise}
 \label{sec:premise}
-Moving on from our discussion of exploration-exploitation algorithms in MAB problems, we'll now explore the concept of pure exploration. Unlike exploration-exploitation, which has to balance between exploiting the best arm whilst exploring for better ones, pure exploration simplifies this by focusing solely on exploration. This means it doesn't care about being penalized choosing sub-optimal arms, as it's goal is to find the best arm as fast as possible with some certainty value.
+Moving on from our discussion of exploration-exploitation algorithms in MAB problems, I'll now explore the concept of pure exploration. Unlike exploration-exploitation, which has to balance between exploiting the best arm whilst exploring for better ones, pure exploration simplifies this by focusing solely on exploration. This means it doesn't care about being penalized choosing sub-optimal arms, as it's goal is to find the best arm as fast as possible with some certainty value.
+
+The key difference lies in deciding when to stop, known as the $\textbf{stopping time}$ $\stoppingTime$. In traditional bandit scenarios, this stopping time sets the maximum number of arm selections allowed. While there's typically an upper limit on $\stoppingTime$, Pure Exploration agents tend to reach a stopping time below this threshold.
+
+\section{Definition of Pure Exploration Agents}
+
+\begin{definition}\label{def:method}
+The triple $(\policy, \stoppingTime, \selectionRule)$ is a \textbf{method} $\method$, given a policy $\policy$, stopping time $\stoppingTime$, and selection rule $\selectionRule$.
+
+\begin{enumerate}
+    \item \textbf{Policy} $\policy$: A function that returns which arm to select at each timestep
+    
+    \item \textbf{Stopping Time} $\stoppingTime$: A function that determines if the agent stops exploring
+    
+    \item \textbf{Selection Rule} $\selectionRule$ : A function that identifies the optimal arm upon cessation of exploration
+
+    Usually, this is defined intuitively as the arm with the highest empirical mean, that is: $ \arg\max_{a}\left[\empiricalMeanReward{a}{\stoppingTime}\right]$
+    
+\end{enumerate}
+\end{definition}
+
+\section{Aims of Pure Exploration Agents}
+\label{sec:simpleregret}
 
 Since in pure exploration we no longer care about cumulative regret, we have to redefine our performance measure. One popular method is using simple regret, which is defined as "the expected regret to be chosen after time t by policy $\policy$":
 
-$$\simpleRegret{t, \policy}{\policy} = \Ex_{\policy}(\gap{A_{t+1}}).$$
+\begin{align}
+\simpleRegret{t, \policy}{\policy} = \Ex_{\policy}(\gap{A_{t+1}}).
+\end{align}
 
 Intuitively, relating to our Ice Cream example \ref{ex:ice-cream}, this represents the expected performance difference between the best ice cream and the selected one. Naturally, we want this to be as small as possible, to minimize the probability we choose a worse ice cream, although we are constrained by two factors:
 
@@ -16,10 +40,9 @@ Intuitively, relating to our Ice Cream example \ref{ex:ice-cream}, this represen
     \item How certain we want to be we've got the best arm ($\rho$)
 \end{itemize}
 
-\section{Algorithms for pure exploration - uniform}
-\label{sec:simpleregret}
+\section{Simple Algorithms for Pure Exploration}
 
-Uniform exploration is the simplest form of algorithm for pure exploration scenarios. Similarly to the Greedy algorithm \ref{sec:Greedy}, it samples arms in such a way that the outcome is a uniform selection. However for the Uniform exploration policy, we ensure each arm is selected perfectly uniformly. This means we have no notion of an action value estimate:
+Uniform exploration is the simplest form of algorithm for pure exploration scenarios. Similarly to the Greedy algorithm \ref{sec:Greedy}, it samples arms in such a way that the outcome is a uniform selection. However for the Uniform exploration policy, we ensure each arm is selected perfectly uniformly:
 
 \pseudobox{%
     \KwIn{List of arms $\armsList$ with unknown distributions $\armDistributionVect$}
@@ -43,22 +66,20 @@ Uniform exploration is the simplest form of algorithm for pure exploration scena
 
 In the previous chapter, we had some notion of certainty of our decisions, such as UCB \ref{sec:UCB} and Ripple \ref{sec:ripple}. However, our understanding was obfuscated by the exploration and exploitation factors. An exception to this is when $t \rightarrow \infty$, but this is unrealistic, and doesn't align with real-world situations, as demonstrated by the Substance Synthesis example \ref{ex:substance-synthesis}.
 
-However, in pure exploration, our only "drive" is exploration, which makes defining a failure probability parameter $\failureProb$ much easier. Hence, an algorithm's goal is to find the best arm, with $(1-\failureProb)$ certainty, with as few samples as possible i.e before some stopping time $\stoppingTime$. Naturally, the exact value of $\failureProb$ will vary depending on the scenario - for our Substance Synthesis example \ref{ex:substance-synthesis}, we may have our $\failureProb$ relatively high, if we expect there to be a very large difference in the results of each resistor. However, in the later stages, when changes are comparatively much smaller, we may choose a very small value for $\failureProb$ so that we're very certain which changes have made an improvement. In order to compare any strategies, let us define:
+However, in pure exploration, our only "drive" is exploration, which makes defining a failure probability parameter $\failureProb$ much easier. Hence, an algorithm's goal is to find the best arm, with $(1-\failureProb)$ certainty, with as few samples as possible i.e before some stopping time $\stoppingTime$. Naturally, the exact value of $\failureProb$ will vary depending on the scenario - for our Substance Synthesis example \ref{ex:substance-synthesis}, we may have our $\failureProb$ relatively high, if we expect there to be a very large difference in the results of each resistor. However, in the later stages, when changes are comparatively much smaller, we may choose a very small value for $\failureProb$ so that we're very certain which changes have made an improvement.
 
-\begin{definition}\label{def:method}
-    The triple $(\policy, \stoppingTime, \selectionRule)$ is a \textbf{method} $\method$, given a policy $\policy$, stopping time $\stoppingTime$, and selection rule $\selectionRule$.
-\end{definition}
-
-\ognote{Elaborate on specifics of policy, stopping time and selection rule}
+In order to compare any strategies, let us define:
 
 \begin{definition}\label{def:soundess}
 A method  $\method = (\policy, \stoppingTime, \selectionRule)$ is said to be \textbf{sound} with failure probability $\failureProb$ if for all  $v \in \banditSpace$,
+\begin{align}
+\Prob_{}(\stoppingTime < \infty  \text{ and }  \gap{\selectionRule}(v) > 0) \leq \failureProb.
+\end{align}
 
-$$\Prob_{}(\stoppingTime < \infty  \text{ and }  \gap{\selectionRule}(v) > 0) \leq \failureProb.$$
-
-Equivalently:
-
-$$\Prob_{}(\stoppingTime < \infty  \text{ and }  \gap{\selectionRule}(v) = 0) \geq 1-\failureProb.$$
+Equivalently we have
+\begin{align}
+\Prob_{}(\stoppingTime < \infty  \text{ and }  \gap{\selectionRule}(v) = 0) \geq 1-\failureProb.
+\end{align}
 
 \end{definition}
 
@@ -72,22 +93,41 @@ Naturally, we desire some method that has policy $\policy$ that minimizes the st
 % Explain Section 33.2.2 and try to make sense of Algorithm 21 and Theorem 33.6.
 It has been shown previously that the expected stopping time $\stoppingTime$ for a MAB with fixed confidence $\failureProb$ is bounded by below as follows:
 
-\begin{theorem}
-For a MAB with arm distributions $\armDistributionVect$, some method $\method = (\policy, \stoppingTime, \selectionRule)$, and failure probability $\failureProb$, $\forall v \in \banditSpace:$ \ognote{Theorem 33.5 in Lattimore}
+\begin{theorem}\label{thm:fixed-confidence}
+For a MAB with arm distributions $\armDistributionVect$, some method $\method = (\policy, \stoppingTime, \selectionRule)$, and failure probability $\failureProb$, $\forall \bandit \in \banditSpace:$
 
-$$\Ex(\stoppingTime) \geq c^*(v) \times log\left({\frac{1}{4(1-\failureProb)}}\right)$$
+%Theorem 33.5 in Lattimore
 
-$$for \quad \ognote{Unsure}$$
+\begin{align}
+\Ex(\stoppingTime) \geq c^*(\bandit) \times log\left({\frac{1}{4(1-\failureProb)}}\right)
+\end{align}
+
+\begin{align}
+\text{for } c^*(\bandit)^{-1} = \sup_{\alpha \in \mathcal{P}_{k-1}}\left(
+\inf_{\bandit^{'} \in \banditSpace_{alt}(\bandit)}\left(
+\sum_{i=1}^{k} \alpha_{i} \relativeEntropy{\bandit_{i}}{\bandit_{i}^{'}}
+\right)
+\right)
+\end{align}
 \end{theorem}
 
-\ognote{Insert lower bound statement}
+We will focus on the \textbf{Gaussian} setting for this section. Hence, we can define the \textbf{relative entropy} \relativeEntropy{u}{v} of two Gaussian distributions. Assuming they both have identical variances $\sigma_i$, this is:
 
-Sadly, we cannot construct an algorithm that outperforms this \ognote{the lower bound}; however, we can create one that ensures all potential outcomes are as close to the lower bound as possible. In order to do this, such an algorithm would have to estimate each arm's underlying mean $\armPopulationMean{a}$ by sampling in proportion to the empirical mean $\empiricalMeanReward{a}{t}$ for $t \leq \stoppingTime$.
+\begin{align}
+\relativeEntropy{\bandit}{\bandit^{'}} \coloneqq \frac{\left( \armPopulationMeanSpecific{i}{\bandit} - \armPopulationMeanSpecific{i}{\bandit^{'}}\right)^2}{2\sigma_i^2}
+\end{align}
 
-However, this can lead to some arms being "starved" if we initially get unfortunately poor results from the first few samplings, similarly to greedy strategies mentioned previously\ref{sec:Greedy}. Hence, we must impose some "resource equity" by requiring us to sample each arm at least some number of times at each time measure, which hopefully ensures $\empiricalMeanReward{a}{t}$ is close to $\armPopulationMean{a}$ for sufficiently large $t$
+We're also using a \textbf{probability simplex} $\mathcal{P}_{k-1}$, which is a k-dimensional unit vector, in that $\mathcal{P}_{k-1} = \{ \mathbf{x} \in \left[0, 1 \right]^{k}, \|\mathbf{x}\| = 1
+ \}$. (For example, we could have $\alpha = [0.2, 0.35, 0.45] \in \mathcal{P}_{2}$)
+
+$c^*(\bandit)^{-1}$ appears a bit strange, however what it's doing is it's essentially performing a maximin game with itself. Essentially, $c^*(\bandit)^{-1}$ represents the maximum value achievable for the smallest potential difference between two diverse-prediction bandits, considering a simplex $\alpha$.
+
+Sadly, we cannot construct an algorithm that outperforms this \ref{thm:fixed-confidence} lower bound; however, we can create one that ensures all potential outcomes are as close to the lower bound as possible. In order to do this, such an algorithm would have to estimate each arm's underlying mean $\armPopulationMean{a}$ by sampling in proportion to the empirical mean $\empiricalMeanReward{a}{t}$ for $t \leq \stoppingTime$.
+
+However, this can lead to some arms being "starved" if we initially get unfortunately poor results from the first few samplings, similarly to greedy strategies mentioned previously\ref{sec:Greedy}. Hence, we must impose some "resource equity" by requiring us to sample each arm at least some number of times at each time measure, which hopefully ensures $\empiricalMeanReward{a}{t}$ is close to $\armPopulationMean{a}$ for sufficiently large $t$.
 
 
-Part of what makes pure exploration algorithms interesting is that they can terminate early whilst not having a narrow uncertainty around each arm's true mean $\armPopulationMean{a}$. This is because they typically hold estimates of each arm's true distribution $\armDistribution{a}$, which is updated at each time step. The uncertainty can then be calculated w.r.t these estimated distributions 
+Part of what makes pure exploration algorithms interesting is that they can terminate early whilst not having a narrow uncertainty around each arm's true mean $\armPopulationMean{a}$. This is because they typically hold estimates of each arm's true distribution $\armDistribution{a}$, which is updated at each time step. The uncertainty can then be calculated with respect to these estimated distributions. 
 
 The high-level intuition of the Track-and-Stop algorithm is as follows:
 
@@ -116,351 +156,117 @@ The pseudo-code for the Track-and-Stop algorithm is defined as follows:
     \ForEach{arm $i = 1$ \KwTo $K$}{
         Choose arm $A_{t+1} \leftarrow i$
     }
+    
     \BlankLine
-    \While{$Z_t < \beta_t(\failureProb)$}{
-        \If{$\arg\min_{i \in [K]}T_i(t) \leq \sqrt{t}$}{
-            Choose arm $A_{t+1} \leftarrow \arg\min_{i \in [K]} T_i(t)$;
+    \Fn{\policyTAS{$t$}}{
+        \If{$\arg\min_{i \in [K]}\totalFunction{i}{t} \leq \sqrt{t}$}{
+            Return arm $j \leftarrow \arg\min_{i \in [K]} \totalFunction{i}{t}$;
         }
         \Else{
-            Choose arm $A_{t+1} \leftarrow \arg\max_{i \in [K]} (t * \empiricalMeanReward{a}{t} - T_i(t))$;
+            Return arm $j \leftarrow \arg\max_{i \in [K]} (t * \empiricalMeanReward{a}{t} - \totalFunction{i}{t})$;
         }
+    }
+    \BlankLine
+    
+    \While{$Z_t < \beta_t(\failureProb)$}{
+        Choose arm $A_{t+1} \leftarrow \policyTAS{t}$;
      }
-    return selection rule $\selectionRule = i^*(\hat{v}(t))$, stopping time $\stoppingTime = t$\newline
+    return $i^*(\hat{v}(t))$, stopping time $\stoppingTime = t$\newline
 
 }{Track-And-Stop Algorithm}
 
-\newcommand{\defineZedTee}[1]{\frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans(#1))}
-\sum_{i=1}^k T_i(#1) \left( \vectorBanditMeans_i(#1) - \aDifBandit_i(#1) \right)^2}
+We define $Z_t := \defineVagueZedTee{t}$ and $\beta_t(\failureProb)$ to be some function that determines stopping time.
 
-\url{https://docs.scipy.org/doc/scipy/tutorial/optimize.html}
+In the case where each bandit arm is modelled as a Gaussian distribution with identical variances, $Z_t = \defineZedTee{t}$
 
-We define $Z_t = \defineZedTee{t}$ and $\beta_t(\failureProb)$ to be some function that determines stopping time
+%\[\frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans(X))}
+%\sum_{i=1}^k \totalFunction{i}{X} \left( \vectorBanditMeans_i(X) - \aDifBandit_i\right)^2\]
 
 We now have to show the Track-And-Stop algorithm is sound\ref{def:soundess} with $\failureProb$, given some stopping time $\stoppingTime = \beta_t(\failureProb)$, which we do as follows:
 
-% We firstly need to assume \maxMeanArm
+We need to check the policy $\policy=\policyTAS$, stopping time $\stoppingTime(\failureProb)=Z_t < \beta_t(\failureProb)$ and selection rule $\selectionRule(t) = i^*(\hat{v}(t))$ are well defined, otherwise the algorithm is invalid. $\policyTAS$ always returns some singular arm selection (since we can break ties arbitrarily). Skipping ahead, $\selectionRule(t)$ can also only return some singular arm selection, as if we have a tie for the empirically optimal arm (that is $|\maxMeanArm(\stoppingTime)| \neq 1$), note $Z_t=0$, hence we only stop and use our selection rule if exactly one arm has the highest empirical mean.
 
-\ognote{Complete rubbish - needs rewriting}
-arbitrarily arm $i=1$ is best, in that $\armDistribution{1} = \maxArmDistribution$. This naturally means we want the best arm to be picked constantly after the stopping time, so $\maxMeanArm{t} = 1$ for $\stoppingTime + 1 \leq t < \infty$, since we must account for that the algorithm stops at time $\stoppingTime$, then queries afterwards
-\ognote{Complete rubbish - needs rewriting}
-
-Now, we note that:
+Our stopping time is more complicated, since we must first define $\beta_t(\cdot)$ to check if $\stoppingTime(\cdot)$ is well defined. Now, we note that:
 \begin{align*}
 &\mathrel{\phantom{=}}\left\{\textbf{bandits which disagree with the empirical distribution over what the best arm is} \right\} \\
 &\mathrel{\phantom{=}}\subseteq \left\{\textbf{bandits where the algorithm stops at our stopping time}\right\}
 \end{align*}
 
 Which leads to:
-$$\left\{ v \in \banditSpace_{alt}(\maxMeanArm{{\stoppingTime}}) \right\} \subseteq \left\{ Z_{\stoppingTime} < \beta_{\stoppingTime}(\failureProb)\right\}$$
+\begin{align}
+\left\{ v \in \banditSpace_{alt}(\maxMeanArm({\stoppingTime})) \right\} \subseteq \left\{ Z_{\stoppingTime} < \beta_{\stoppingTime}(\failureProb)\right\}.
+\end{align}
 
-$$\left\{ 1 \notin \maxMeanArm{{\stoppingTime}} \right\} = \left\{ v \in \banditSpace_{alt}(\maxMeanArm{{\stoppingTime}}) \right\} \subseteq \left\{ \defineZedTee{\stoppingTime} < \beta_{\stoppingTime}(\failureProb)\right\}$$
+Expanding on the definition of $\banditSpace_{alt}$ and $Z_t$, and noting that we're assuming arm 1 has the highest true mean:
+
+\begin{align}
+\left\{ 1 \not\in \maxMeanArm({\stoppingTime}) \right\} = \left\{ v \in \banditSpace_{alt}(\maxMeanArm({\stoppingTime})) \right\} \subseteq \left\{ \defineZedTee{\stoppingTime} < \beta_{\stoppingTime}(\failureProb)\right\}.
+\end{align}
 
 So our target equation is the following:
 
 \label{tar:track-and-stop}
-$$\Prob( 1 \notin \maxMeanArm{{\stoppingTime}}) \leq \Prob\left( \defineZedTee{\stoppingTime} \geq \beta_{\stoppingTime}(\failureProb)\right) \leq \failureProb$$
+\begin{align}
+\Prob( 1 \not\in \maxMeanArm({\stoppingTime})) \leq \Prob\left( \defineZedTee{\stoppingTime} \geq \beta_{\stoppingTime}(\failureProb)\right) \leq \failureProb.
+\end{align}
 
 \seperator
 
 Let us define:
 
-$$S_{i_s} := \frac{s}{2}(\vectorBanditMeans_{i}(\stoppingTime^{-1}(s)) - \armPopulationMean{i})^2 \textbf{ where } \stoppingTime^{-1}(s) := min \{ t \in \naturals : \stoppingTime_{i}(t) = s \}$$
+\begin{align*}
+S_{i_s} := \frac{s}{2}(\vectorBanditMeans_{i}(\stoppingTime^{-1}(s)) - \armPopulationMean{i})^2 \textbf{ where } \stoppingTime^{-1}(s) := min \{ t \in \naturals : \stoppingTime_{i}(t) = s \}.
+\end{align*}
 
-By Lemma\ref{lem:upperBoundSeq}:
-$$\implies \Prob(\exists s \in \naturals : S_{i_s} \geq \log{s(s+1)} + \log{\frac{1}{\failureProb}}) \leq \failureProb$$
+By Lemma\ref{lem:upperBoundSeq} we have
+\begin{align*}
+\Prob(\exists s \in \naturals : S_{i_s} \geq \log{s(s+1)} + \log{\frac{1}{\failureProb}}) \leq \failureProb.
+\end{align*}
 
-If we let $g(s) = \log{\failureProb(\failureProb + 1)}$, we meed the conditions of Lemma\ref{lem:increasingSeqUpper}, so:
+If we let $g(m) = \log{m(m + 1)}$, we meet the conditions of Lemma\ref{lem:increasingSeqUpper}, so we get:
+\begin{align*}
+\Prob \left(\exists (s_i)_{i=1}^{k} : \sum_{i=1}^{k}S_{i_s} \geq k\log
+\{{
+(\sum_{i=1}s_i)(\sum_{i=1}s_i + 1)
+}\}
++ x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}.
+\end{align*}
 
-$$\implies \Prob \left(\exists (s_i)_{i=1}^{k} : \sum_{i=1}^{k}S_{i_s} \geq k ((\log{\sum_{i=1}}s_i)(\log{\sum_{i=1}}s_i + 1)) + x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+Expanding out our definition of $S_{i_s}$ by summing over t, we get:
 
-$$\implies \Prob \left(\exists t \in \naturals : \frac{1}{2}\sum_{i=1}^{k}T_i(t)(\vectorBanditMeans_{i}(t) - \aDifBandit_{i}(t))^2 \geq k ((\log{t})(\log{t + 1})) + x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
+\begin{align*}
+\Prob \left(\exists t \in \naturals : \frac{1}{2}\sum_{i=1}^{k}\totalFunction{i}{t}(\vectorBanditMeans_{i}(t) - \aDifBandit_{i}(t))^2 \geq k\log
+\{{
+t(t + 1)
+}\}
++ x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}.
+\end{align*}
 
 We know that if $t \in \naturals$ exists, then the statement must also hold for $\stoppingTime \geq t$:
-
-$$\implies \Prob \left(\frac{1}{2}\sum_{i=1}^{k} T_i(\stoppingTime)(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq k ((\log{\stoppingTime})(\log{\stoppingTime + 1})) + x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
-
-Now, we get to the point where we must define $\beta_{t}(s)$. If we say $\beta_{t}(s) := k * log\left(t(t+1)\right) + \failureProb^{-1}(\failureProb)$ with $\failureProb(s) := \left(\frac{x}{k}\right)^k e^{k-s}$, then we have $\failureProb^{-1}(\failureProb) = x$ and $\failureProb(x) = \failureProb$, so:
-
-$$\implies \Prob \left(\frac{1}{2}\sum_{i=1}^{k} T_i(\stoppingTime)(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq \beta_{\stoppingTime}(s) \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
-
-$$\implies \Prob \left(\frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans(\stoppingTime))}\sum_{i=1}^{k} T_i(\stoppingTime)(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq \beta_{\stoppingTime}(s) \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}$$
-
-We have now met the target\ref{tar:track-and-stop} equation, so we have:
-
-$$\beta_{t}(s) = k * log\left(t(t+1)\right) + x$$
-$$Z_{t}(\vectorBanditMeans) = \frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans)}\left(\sum_{i=1}^{k} T_i(t)(\vectorBanditMeans_{i}(t) - \aDifBandit_{i})^2\right)$$
-$$\epsilon = \left(\frac{x}{k}\right)^k e^{k-x}$$
-
-Perhaps the simplest way will be to use the expression in [33.4a in Lattimore book] and re-parameterise $\alpha$ as a vector $\beta_1,...,\beta_K \in \R $ via $ \alpha_i = e^{\beta_i}/(\sum_j e^{\beta_j})$. This way you don't need any additional constraints to encode probability vectors.
-
-\ognote{Assuming the "best arm" is arm 1 doesn't make sense in implementation purposes. Add extra notation for empirical best and true best arm, and redefine a function that does the same as min}
-
-Let $\alpha_i = \frac{e^{\beta_i}}{c}$ with $c := \sum_j e^{\beta_j}$
-
-Using that, and that $\sigma_i = 1 \forall i$:
-$$\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans)}\left(\sum_{i=1}^{k} \alpha_i D(\vectorBanditMeans_{i}(t), \aDifBandit_{i})\right) = \frac{1}{2}\min_{i>1}\frac{\alpha_1 \alpha_i \gap{i}^2}{\alpha_1 \sigma_i^2 + \alpha_i \sigma_1^2} = \frac{1}{2}\min_{i>1}\frac{\gap{i}^2}{c} \frac{e^{\beta_1} e^{\beta_i}}{e^{\beta_1} + e^{\beta_i}}
-$$
-
-With $J(\beta):=\sum_{j=1}^K e^{\beta_j}$ we can define:
-\[F(\beta):= \frac{1}{2}\min_{i>1}\frac{\alpha_1 \alpha_i \gap{i}^2}{\alpha_1 \sigma_i^2 + \alpha_i \sigma_1^2}=\frac{1}{2J(\beta)}\min_{i>1}   \frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\]
-
-This is quite difficult to evaluate, since the minimisation may result in the values of $e^{-\beta_i}$ getting large enough such that the whole expression gets so small it \textquotedblleft rounds\textquotedblright\space down to zero, which isn't very helpful. Therefore, we can take to log and minimise over that
-
-So we have:
-\begin{align}
-\log(F(\beta)) =\log\left(\min_{i>1}\frac{\alpha_1 \alpha_i \gap{i}^2}{\alpha_1 \sigma_i^2 + \alpha_i \sigma_1^2}\right)
-=\log\left(\frac{1}{2J(\beta)}\min_{i>1}   \frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right) \\
-=\log\left(\frac{1}{2J(\beta)}\right) + \log\left(\min_{i>1} \frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right) \\
-=-\log\left(2\right) -\log\left(J(\beta)\right) + \min_{i>1} \log\left(\frac{\Delta_i^2}{\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right) \\
-\log(F(\beta))=-\log\left(2\right) -\log\left(J(\beta)\right) + \min_{i>1} \left(2\log\left(\Delta_i\right) -\log\left({\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right)\right)
+\begin{align}\label{eq:314RenameLater}
+\Prob \left(\frac{1}{2}\sum_{i=1}^{k} \totalFunction{i}{\stoppingTime}(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq k\log
+\{{
+\stoppingTime(\stoppingTime + 1)
+}\}
++ x \right) \leq \left(\frac{x}{k}\right)^k e^{k-x}.
 \end{align}
 
-Note, when minimising this, the \textquotedblleft$-\log\left(2\right)$\textquotedblright\space makes no difference, so we can exclude it for those purposes. So, we have:
-
+Let's now define $\failureProbabilityFunction:[k,\infty) \rightarrow [1,\infty)$ by $\failureProbabilityFunction(x) := \left(\frac{x}{k}\right)^k e^{k-x}$ and observe that 
+\begin{align*}
+\failureProbabilityFunction'(x)=\frac{\left(\frac{x}{k}\right)^{k} \left(k - x\right) e^{k - x}}{x},
+\end{align*}
+which is strictly negative on $(k,\infty)$. Hence, $\failureProbabilityFunction$ is strictly decreasing with $\failureProbabilityFunction(k)=1$ and $\lim_{x \nearrow \infty} \failureProbabilityFunction(x)=0$. Thus, $\failureProbabilityFunction$ has a well-defined inverse $\failureProbabilityFunction^{-1}:[0,1] \rightarrow [0,k]$. Next, we define the quantity $\beta_{t}(\failureProb) := k \cdot \log\left\lbrace t(t+1)\right\rbrace + \failureProbabilityFunction^{-1}(\failureProb)$ for $\failureProb \in [0,1]$. Hence, by \eqref{eq:314RenameLater} we have
 \begin{align}
-Z_{t}(\vectorBanditMeans) = \frac{1}{2}F(\beta)
-\implies Z_{t}(\vectorBanditMeans) = \frac{1}{2}e^{\log(F(\beta)) }
-= \frac{1}{2}e^{-\log\left(2\right) -\log\left(J(\beta)\right) + \min_{i>1} \left(2\log\left(\Delta_i\right) -\log\left({\sigma_i^2e^{-\beta_i} +\sigma_1^2 e^{-\beta_1} }\right)\right)}
+ \Prob \left(\frac{1}{2}\sum_{i=1}^{k} \totalFunction{i}{\stoppingTime}\{\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime)\}^2 \geq \beta_{\stoppingTime}(\failureProb) \right) \leq \failureProb.
 \end{align}
+Thus, we have
+\begin{align*}
+\Prob \left(\frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans(\stoppingTime))}\sum_{i=1}^{k} \totalFunction{i}{\stoppingTime}(\vectorBanditMeans_{i}(\stoppingTime) - \aDifBandit_{i}(\stoppingTime))^2 \geq \beta_{\stoppingTime}(x) \right) \leq \failureProb(x). \qed
+\end{align*}
 
-\lstset{language=Python, % set programming language basicstyle=\small\ttfamily, % basic font style stringstyle=\color{DarkGreen}, otherkeywords={0,1,2,3,4,5,6,7,8,9}, keywordstyle=\color{Blue}, % keyword style commentstyle=\ttfamily \color{DarkGreen}, numbers=left, % display line numbers on left numberstyle=\ttfamily\color{Gray}\footnotesize, % line numbers breaklines=true, breakatwhitespace=true, }
-
-\newpage
-
-\begin{lstlisting}[language=Python]
-File 1
-
-import math
-import numpy as np
-from scipy.optimize import minimize
-import matplotlib
-
-matplotlib.use("TkAgg")  # Switch backend to TkAgg
-import matplotlib.pyplot as plt
-
-
-def objective_function(beta, gap_values):
-    beta_max = max(beta)
-    min_value = np.inf
-
-    # Cases where all arms are identical should give a value of 0
-    if np.all(gap_values == 0):
-        return 0
-
-    for i in range(0, len(beta)):
-        # Ignore the cases where the arm is the "best" arm
-        if gap_values[i] == 0:
-            continue
-
-        current_value = (
-                (gap_values[i] ** 2)
-                / (np.sum(np.exp(beta)))
-                * (np.exp(beta_max) * np.exp(beta[i]))
-                / (np.exp(beta_max) + np.exp(beta[i]))
-        )
-        if current_value < min_value:
-            min_value = current_value
-
-    return min_value
-
-
-def log_objective_function(beta, gap_values, do_penalty=True):
-    beta_max = max(beta)
-    min_value = np.inf
-
-    # Cases where all arms are identical should give a value of 0
-    if np.all(gap_values == 0):
-        return 0
-
-    for i in range(0, len(beta)):
-        if gap_values[i] == 0:
-            continue
-        else:
-            current_value = 2 * math.log(gap_values[i]) - math.log(
-                    np.exp(-beta[i]) + np.exp(-beta_max)
-                )
-        if current_value < min_value:
-            min_value = current_value
-
-    # Penalise very large values of beta
-    if do_penalty:
-        penalty = np.sum(pow(beta, 2)) * 0.1
-    else:
-        penalty = 0
-
-    return (-math.log(np.sum(np.exp(beta))) + min_value) + penalty
-
-
-# Returns a tuple containing the betas resulting in the minimum value of the LOG OBJECTIVE FUNCTION
-# and the minimum value when using these betas in the OBJECTIVE FUNCTION.
-def get_minimising_beta_data(gap_values, beta_prior=None, iterations=10):
-    if beta_prior is None:
-        beta_prior = np.array(
-            [np.random.uniform(-5, 5) for _ in range(len(gap_values))]
-        )
-    average_min_value = -200
-    not_too_small = [
-        {
-            "type": "ineq",
-            "fun": lambda beta, i=i, min_val=average_min_value: beta[i] - min_val,
-        }
-        for i in range(len(gap_values))
-    ]
-
-    max_value = 200
-    not_too_big = [
-        {"type": "ineq", "fun": lambda beta, i=i, max_val=max_value: max_val - beta[i]}
-        for i in range(len(gap_values))
-    ]
-
-    constraints = [*not_too_small, *not_too_big]
-    results = []
-    min_values = []
-
-    for _ in range(1, iterations):
-        beta_prior_noisy = beta_prior + np.random.normal(loc=0, scale=0.5, size=len(beta_prior))
-        res = minimize(
-            log_objective_function,
-            # Add some random noise to the beta_prior
-            beta_prior_noisy,
-            gap_values,
-            bounds=[(None, None) for _ in range(len(beta_prior))],
-            constraints=constraints,
-            tol=1e-5,
-        )
-        if res.success:
-            results.append(res.x)
-            min_values.append(res.fun)
-        else:
-            print("Optimization failed. Check constraints or initial values.")
-            print(f"Failed with:\nbeta_prior={list(beta_prior)}")
-            print(f"gap_values={list(gap_values)}")
-            exit(0)
-    return results, min_values
-
-
-# Returns the best beta values, and the minimum respective value of the OBJECTIVE FUNCTION
-def minimise_beta(gap_values, beta_prior=None):
-    beta_results, min_values = get_minimising_beta_data(gap_values, beta_prior=beta_prior)
-    return determine_result(beta_results, min_values, gap_values)
-
-
-# Returns the best beta values, and the minimum respective value of the OBJECTIVE FUNCTION
-def determine_result(all_beta_results, min_values, gap_values):
-    all_beta_results = np.array(all_beta_results)
-    min_values = np.array(min_values)
-
-    if USE_MIN:
-        absolute_min_index = np.argmin(min_values)
-        beta_result = all_beta_results[absolute_min_index]
-    else:
-        # Sort the indices based on the minimum values obtained
-        sorted_indices = np.argsort(min_values)
-
-        # Determine the number of results to consider for averaging (top 10%)
-        num_results = len(all_beta_results)
-        num_top_results = max(1, int(0.1 * num_results))
-
-        # Select the top 10% of results based on the sorted indices
-        top_results = all_beta_results[sorted_indices[:num_top_results]]
-
-        # Calculate the average of the selected results
-        beta_result = np.mean(top_results, axis=0)
-
-    min_value = objective_function(beta_result, gap_values)
-    return beta_result, min_value
-
-
-def plot_beta_values(results):
-    results = np.array(results)
-    for i, beta_values in enumerate(results.T):
-        jittered_x = np.random.normal(i, 0.1, size=len(beta_values))
-        plt.scatter(jittered_x, beta_values, label=f"Beta {i + 1}", alpha=0.5, s=5)
-    plt.xlabel("Beta Index")
-    plt.ylabel("Beta Values")
-    plt.title("Scatter Plot of Beta Values")
-    plt.legend()
-    plt.show()
-
-
-# Determine if you want the best result to be defined by the absolute min or the average of the best 10%
-USE_MIN = True
-
-if __name__ == "__main__":
-    success_rates = np.array([0.01, 0.02, 0.03, 0.05, 0.5, 0.51])
-    gap_values = np.array([np.max(success_rates) - sr for sr in success_rates])
-
-    beta_results, min_values = get_minimising_beta_data(gap_values, beta_prior=None)
-    beta_result, min_value = determine_result(beta_results, min_values, gap_values)
-    plot_beta_values(beta_results)
-
-    print("Optimal solution found!")
-    print(f"Beta values: {[round(beta, 4) for beta in beta_result]}")
-    print(
-        f"Respective alpha values: {[round(np.exp(beta) / np.sum(np.exp(beta_result)), 4) for beta in beta_result]}"
-    )
-    print(f"Minimum value of the objective function: {min_value}")
-
-
-File 2
-
-class TrackAndStop(Agent):
-    def __init__(self, failure_probability=0.1):
-        super().__init__()
-        self._initialize()
-        self.failure_probability = failure_probability
-        self.previous_beta = None
-
-    def _zt(self, arm_state):
-        max_success_rate = np.max(arm_state.success_rates)
-        gaps = np.array([max_success_rate - sr for sr in arm_state.success_rates])
-
-        beta_result, min_value = minimise_beta(gaps, beta_prior=self.previous_beta)
-
-        self.previous_beta = beta_result
-
-        exponent = -math.log(2) + log_objective_function(beta_result, gaps, do_penalty=False)
-
-        print(f"constant: {math.log(2)}")
-        print(f"log_function: {log_objective_function(beta_result, gaps, do_penalty=False)}")
-        print(f"exponent: {exponent}")
-        print(f"returns: {0.5 * np.exp(exponent)}\n")
-
-        return 0.5 * np.exp(exponent)
-
-    def _bt(self, arm_state):
-        k = arm_state.num_arms
-        t = arm_state.total_pulls + 1
-        # TODO Correct value for x?
-        x = self.failure_probability
-        return k * math.log(t * (t + 1)) + x
-
-    def choose_lever(self, arm_state):
-        # Checks also if each arm has been pulled at least once
-        t = arm_state.total_pulls
-        least_picked_arm = np.argmin(arm_state.arm_pulls)
-
-        if arm_state.arm_pulls[least_picked_arm] < math.sqrt(t):
-            return least_picked_arm
-        else:
-            return np.argmax((t * arm_state.success_rates) - arm_state.arm_pulls)
-
-    def do_stop(self, arm_state):
-        if self.previous_beta is None:
-            self.previous_beta = np.random.normal(
-                loc=0, scale=5, size=arm_state.num_arms
-            )
-        zt = self._zt(arm_state)
-        bt = self._bt(arm_state)
-
-        print(f"zt = {zt}")
-        print(f"bt = {bt}")
-
-        return zt >= bt
-
-    def do_pass(self, arm_state):
-        return np.argmax(arm_state.successes)
-
-    def get_result(self, arm_state):
-        return np.argmax(arm_state.successes)
-\end{lstlisting}
+We have now met the target equation \ref{tar:track-and-stop} equation, so 
+\begin{align*}
+\beta_{t}(x) = k * \log\left(t(t+1)\right) + x \\
+Z_{t}(\vectorBanditMeans) = \frac{1}{2}\inf\limits_{\aDifBandit \in \banditSpace_{alt}(\vectorBanditMeans)}\left(\sum_{i=1}^{k} \totalFunction{i}{t}(\vectorBanditMeans_{i}(t) - \aDifBandit_{i})^2\right) \\
+\epsilon = \failureProb(x) = \left(\frac{x}{k}\right)^k e^{k-x}.
+\end{align*}

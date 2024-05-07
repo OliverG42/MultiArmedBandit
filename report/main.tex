@@ -14,21 +14,20 @@
 
 \usepackage{cleveref}
 
-
-
 \addbibresource{report/references.bib}
 
 \begin{document}
+
+\setlength{\abovedisplayskip}{3pt} % Set upper buffer space when using align
+\setlength{\belowdisplayskip}{3pt} % Set lower buffer space when using align
 
 \include{report/macros}
 
 \maketitle{Faculty of Mathematics}
             {Oliver Gay}
             {Maths and Computer Science}
-            {Project Title Goes Here}
-            {August 31, 2023}
-
-\include{report/chapters/-1-abstract}
+            {An Exploration into the Implementation of Multi-Armed Bandits}
+            {May 7th, 2023}
 
 \newpage
 \setcounter{page}{0}
@@ -38,11 +37,7 @@
 \include{report/chapters/1-classicalBanditAlgos}
 \include{report/chapters/2-pureExploration}
 \include{report/chapters/3-simulations}
-\include{report/chapters/4-upperBounds}
-\include{report/chapters/5-shortestPath}
-\include{report/chapters/6-empiricalInvestigation}
-\include{report/chapters/7-nonStationary}
-
+\include{report/chapters/4-conclusion}
 
 \printbibliography[title={References}]
 

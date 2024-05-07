@@ -1,7 +1,11 @@
-\chapter{Introduction}
+\chapter*{Introduction}
 \label{cha:introduction} % (labels for cross referencing)
 
 The Multi-Armed Bandit problem (often abbreviated to MAB), is a framework in machine learning and decision theory, in which, an agent is presented with a set of actions, each with an unknown reward distribution assigned to it. The agent's objective is to attempt to maximise it's cumulative reward over a period of time by analysing the information it gathers from performing actions.
+
+In this paper, I will cover multiple different algorithm approaches that handle the MAB problem in a variety of different ways. Each of these has different degrees of success, depending on the scenario, and have traits and issues not obvious when dealing only with their mathematical formulae. I will also investigate the pure exploration setting for MAB and the most common algorithm used.
+
+\section*{Notation Defined}
 
 For the purpose of this paper, we define the following:
 
@@ -9,14 +13,14 @@ We will consider a multi-armed bandit problem with $K$ arms and a time horizon $
 
 A MAB has $K$ arms with distributions $\armDistributionVect = (\armDistribution{1}, \dots , \armDistribution{K}) \in \banditSpace$, such that arm $i$ has distribution $\armDistribution{k}$
 
-We define $\banditSpace_{alt}(P) = \{ P^{\prime} \in \banditSpace | \}$ \ognote{todo}
-
-Let $\armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions, with $\maxPopulationMean \coloneqq \max_{k \in [K]} \armPopulationMean{k}$, and $\maxArmDistribution \coloneqq  \arg\max\limits_{k \in [K]}{\armPopulationMean{k}}$
+Let $\armPopulationMeanSpecific{1}{P}, \dots, \armPopulationMeanSpecific{K}{P} := \armPopulationMean{1}, \dots , \armPopulationMean{K}$ be the mean of the above distributions, with $$\maxPopulationMean \coloneqq \max_{k \in [K]} \armPopulationMean{k}$$
+$$\maxArmIndices\left( \mean \right) \coloneqq \arg\max\limits_{k \in [K]}{\armPopulationMean{k}}$$
+$$\maxArmDistribution \coloneqq \{ \armDistribution{j} \text{ for } j \in \maxArmIndices \}$$.
 
 We will also define the ''gap" $\gap{i} \coloneqq \maxPopulationMean - \armPopulationMean{i}$
 
 
-For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. We shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy
+For each time step $t \in [T]:=\{1,\ldots,T\}$, an arm $\action{t}$ is chosen, and a corresponding reward is observed as $\reward{t}{}$, where the random rewards $\reward{t}{k} \sim  \armDistribution{k}$ are drawn independently. I shall assume that our actions  $\action{t}$ are selected in accordance with some policy $\policy$. Here a policy
 
 $$\policy: \bigcup_{\ell \in \N}([K]\times \R)^\ell \times [0,1] \rightarrow [K]$$ 
 
@@ -34,16 +38,14 @@ $$
 $$
 where the actions $\action{t}$ are selected via the policy $\policy$.
 
-\hrnote{Check where best to define this...}
-
-Let's introduce some useful notation. Fix an arm $a\in [\numArms]$ and a time step $t \in [\timeHorizon]$. First we let $\totalFunction{a}{t}$ be how many times arm $a\in [\numArms]$ has been selected up until time $t \in [\timeHorizon]$,
+We say $\totalFunction{a}{t}$ to be how many times arm $a\in [\numArms]$ has been selected up until time $t \in [\timeHorizon]$,
 $$\totalFunction{a}{t} \coloneqq \sum_{i=1}^{t} \mathbb{I}(\action{i} = a).$$
 
-Further more, define $\empiricalMeanReward{a}{t}$ to be the average reward for arm $a$ over the first $t$ time steps,
+Further more, we define $\empiricalMeanReward{a}{t}$ to be the average reward for arm $a$ over the first $t$ time steps,
 \begin{align*}
 \empiricalMeanReward{a}{t}:=\frac{\sum_{i=1}^{t} \mathbb{I}(\action{i} = a)\cdot \reward{t-1}{a}}{\sum_{i=1}^{t} \mathbb{I}(\action{i} = a)}.
 \end{align*}
-So we can define $\maxMeanArm{t} = \arg\max\limits_{k \in [K]}{\empiricalMeanReward{k}{t}}$ to be the arm(s) with the highest observed mean at time t, and 
+So we can define $$\maxMeanArm(t) = \arg\max\limits_{k \in [K]}{\empiricalMeanReward{k}{t}}$$ to be the arm(s) with the highest observed mean at time t, and define $$\banditSpace_{alt}(P) = \{ P^{\prime} \in \banditSpace \mid \maxMeanArm_{P'} \cap \maxMeanArm_{P} = \emptyset\}$$ to be the set of all bandits with different optimal arms to $P$
 
 Finally, given a failure probability $\delta \in (0,1)$, we let $\ucb{a}{t}{\delta}$ denote the upper confidence bound on $\armPopulationMean{a}$ based on the first $t$ rounds,
 \begin{align*}
@@ -52,34 +54,32 @@ Finally, given a failure probability $\delta \in (0,1)$, we let $\ucb{a}{t}{\del
 
 
 
-\section{Illustrative Scenarios}\label{ch:examples}
+\section*{Illustrative Scenarios}\label{ch:examples}
 
-In this chapter, we present several illustrative scenarios that serve as running examples throughout this paper. These examples embody diverse multi-armed bandit contexts, each highlighting distinct challenges and strategies.
+In this chapter, I present several illustrative scenarios that serve as running examples throughout this paper. These examples embody diverse multi-armed bandit contexts, each highlighting distinct challenges and strategies.
 
-\section*{Example 1: Substance Synthesis}
+\subsection{Substance Synthesis}
 \label{ex:substance-synthesis}
 
-Consider an electrical company engaged in a controlled laboratory experiment aimed at refining insulating materials for resistors. The company initiates this endeavor by iteratively adjusting parameters of a well-performing resistor, yielding a series of distinct batches. Rigorous evaluations follow, subjecting individual resistors within each batch to semi-randomized tests. These tests yield binary outcomes — either pass or fail — indicating the suitability of the resistors. Due to budget limitations, the company can only invest in a finite number of batches. Furthermore, temporal constraints enforce restricted testing durations.
+Consider an electrical company engaged in a controlled laboratory experiment aimed at refining insulating materials for resistors. The company initiates this endeavor by iteratively adjusting parameters of a well-performing resistor, yielding a series of distinct batches. Rigorous evaluations follow, subjecting individual resistors within each batch to semi-randomized tests. These tests yield binary outcomes — either pass or fail — indicating the suitability of the resistors. Due to budget limitations, the company can only invest in a finite number of batches. In addition, temporal constraints enforce restricted testing durations.
 
 Within this context, every resistor within a batch can be perceived as an individual "arm," representing a potential course of action. These arms share traits with their parent resistors, meaning their success rates will tend to be similar to their parent. The act of evaluating a particular resistor mirrors the action of pulling the lever corresponding to its arm. Below the surface, each arm harbors a concealed probability distribution governing the outcomes of evaluations. Navigating the balance between exploration and exploitation becomes the crux of this example, all while adhering to budget and temporal limitations.
 
 
-\section*{Example 2: Dynamic Pricing}
+\subsection{Consumer Pricing}
 \label{ex:dynamic-pricing}
 
 Consider an online retail platform seeking to optimize its revenue by dynamically adjusting product prices. Each product is associated with a distinct "arm" in the multi-armed bandit framework. The platform aims to find the ideal price point that maximizes both sales volume and profit margin.
 
 As customers interact with the platform, they view products with different prices. When a customer selects a product, their action can be likened to pulling the arm associated with that product. The platform's challenge lies in efficiently exploring various price points to increase generated revenue, while also exploiting the best-performing prices to boost overall profitability.
 
-However, the probabilities of customer responses to different price points are not static: they may evolve over time due to several factors, such as market trends, competitor pricing, and consumer preferences. The platform's objective is to strike a balance between the exploration of new price points and the exploitation of known profitable prices to optimize its long-term revenue. This scenario underscores the dynamic side of multi-armed bandit problems, where the environment's feedback probabilities may change over time, requiring adaptive strategies to ensure continual optimization in the long run.
+However, since consumer preferences are so diverse and unpredictable, the platform may not know what consumers prefer to see in their adverts. What's more, the majority of consumers don't click adverts very often, leading most adverts to have a dampened click-though rate. The platform's objective is to strike a balance between the exploration of new price points and the exploitation of known profitable prices to optimize its long-term revenue. This scenario underscores the commercial side of multi-armed bandit problems, where the environment's feedback probabilities are largely unknown, requiring adaptive strategies to ensure continual optimization in the long run.
 
 
-\section*{Example 3: Ice Cream Flavours}
+\subsection{Ice Cream Flavours}
 \label{ex:ice-cream}
-Consider an ice cream company trying to create the ultimate ice cream flavour that can perfectly replicate each consumer's favourite taste sensation when eaten. However, they haven't quite perfected the formula, and their experimental ice cream batches can sometimes taste like cat sick. Fortunately, they've managed to assemble a group of volunteers who are willing to be taste-testers for these experimental batches. Each day, they try producing multiple batches of ice cream, and they want use the volunteers to ascertain the best batch of the day as fast as they can, with some degree of certainty, so it has more R+D time to be improved for tomorrow.
+Consider an ice cream research team striving to develop the ultimate flavor that perfectly matches each customer's taste preferences. Despite their efforts, some experimental batches fall short, occasionally tasting unpleasant. Fortunately, they've managed to assemble a group of volunteers who are willing to be taste-testers for these experimental batches. Each day, they try producing multiple batches of ice cream, and they want use the volunteers to ascertain the best batch of the day as fast as they can, with some degree of certainty, allowing for further refinement later on.
 
 An unusual twist to this sort of problem is that the company may not care about the welfare of the volunteers, so it does not care about serving them terrible ice cream, only that they find the best the fastest.
 
-This is a classic example of a pure exploration problem, where we are trying to find the best arm (ice cream batch) that has the highest probability of success (not tasting of cat sick) as fast as possible, without having to balance regret (serving terrible ice cream). The target is not to minimize cumulative regret – instead we are trying to minimize the number of rounds until we have some degree of certainty one arm is the best.
-
-
+This is a classic example of a pure exploration problem, where we are trying to find the best arm (ice cream batch) that has the highest probability of success (not tasting unpleasant) as fast as possible, without having to balance regret (serving terrible ice cream). The target is not to minimize cumulative regret – instead we are trying to minimize the number of rounds until we have some degree of certainty one arm is the best.

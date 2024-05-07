@@ -1,0 +1,12 @@
+\chapter*{Conclusion}
+\label{cha:conclusion} % (labels for cross referencing)
+
+The aim of this project was to, firstly, understand and compare various different MAB algorithms, both in the traditional and pure exploration setting. Secondly, I wanted to implement these algorithms in code to learn strengths and weaknesses they have which are not obviously apparent when dealing with just the mathematical formulae.
+
+The results demonstrate that there is no single algorithm for all MAB scenarios, as they each have specific strengths and weaknesses. The algorithms are either very adaptable, like Epsilon-Greedy and BernTS, or work better for tailored cases, such as UCB and Randomized.
+
+I've shown that Epsilon-Greedy can be customized to fit the specific MAB scenario, however actually finding the correct \epsilonFunction \space to use is usually a case of trial-and-error, which is quite counterproductive, since it uses considerable resources in the process. BernTS can quite easily use prior data to decrease regret by a significant margin, however it can be overly sensitive to the priors selected, which can lead to unnecessary regret accumulation.
+
+In contrast, I've shown that UCB works very well in it's own domain of bandits, specifically those with low numbers of arms and a low spread in the means. Unfortunately, there's no adaptability for different scenarios, other than changing how it calculates it's exploration and exploitation terms, which are an intrinsic part of this version of UCB. While virtually any other algorithm outperforms it, Randomized possesses one unique strength: its absolute lack of strategy ensures consistent, albeit consistently poor, outcomes.
+
+In summary, this project shows the varied strengths and weaknesses of MAB algorithms, emphasizing the importance of tailored approaches. No one algorithm comes out as universally optimal, underscoring the need for careful consideration of specific MAB scenarios when selecting an algorithm.

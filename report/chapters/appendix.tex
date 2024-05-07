@@ -1,6 +1,6 @@
 % Theorems
 
-\chapter{Appendix}\ref{ch:appendix}
+\chapter{Appendix}\label{ch:appendix}
 
 \section{Key tools from probability theory}
 
@@ -40,7 +40,6 @@ G_i &= \left\{ \armPopulationMean{1} < \min_{i \in [\numArms]} UCB(i) \right\}
 \cap \left\{ \armPopulationMean{i} + \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} < \mu_1 \right\}
 \end{align*}
 
-\ognote{May need expanding, since statements are sweeping}
 If $G_i$ occurs, then $\totalFunction{i}{t} \leq u_i$ for all arms, and if not, $\totalFunction{i}{t} \leq t$. We also assume $G_i^c$ is small. Hence, by the Law of Total Expectation:
 
 \begin{align*}
@@ -63,7 +62,6 @@ The first of these sets is decomposed using the definition of UCB:
 \end{align*}
 
 Hence, we can generate a sum of independent subgaussian random variables:
-\ognote{Add this ↑ as a corollary to reference in this?}
 
 \begin{align*}
 \Prob(\mu_1 \geq \min_{i \in [\numArms]} UCB(i))
@@ -76,7 +74,6 @@ Hence, we can generate a sum of independent subgaussian random variables:
 \end{align*}
 
 The second set we can bound relatively simply assuming we've chosen our $u_i$ large enough such that $\gap{i} - \sqrt{\frac{2\log(1/\delta)}{u_i}} \geq c \gap{i}$ for some c. Then:
-\ognote{Add corollary here as well}
 
 \begin{align*}
 \Prob\left( \hat{\mu}_i + \sqrt{\frac{\log(t)}{\totalFunction{i}{t}}} \geq \mu_1 \right)
@@ -106,7 +103,7 @@ Now, choosing $u_i$ can be simple by rearranging the following:
 & u_i = \lceil \frac{2\log(1/\delta)}{(1-c)^2\gap{i}^2} \rceil \quad \text{is a trivial solution.}
 \end{align*}
 
-Picking the natural choice \ognote{Need to clarify this} of $\delta = \frac{1}{t^2}$, this leads to:
+Picking the natural choice  of $\delta = \frac{1}{t^2}$, this leads to:
 
 \begin{align*}
 \Ex(\totalFunction{i}{t}) &\leq u_i + t \left(t \delta + \exp\left(-\frac{u_i c^2 \gap{i}^2}{2}\right)\right) \\
@@ -142,26 +139,7 @@ Which neatly resolves when plugged back into the original equation. By using dec
 \cumulativeRegret{T}{\ucbPolicy} &\leq 8 \sqrt{tk \log(t)} + 3 \sum_{i=1}^{\numArms} \gap{i} 
 \end{align*}
 
-Once we set $\lambda = \sqrt{\frac{16klog(n)}{n}}$ \ognote{Huh?}
-
-The given proof exhibits elegance, but it relies on an arbitrary selection of c. In order to optimise, we must solve:
-
-\begin{align*}
-& \frac{d}{dc} \left( \lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil + 1 + t^{1 - \frac{2c^2}{(1-c)^2}} \right) = 0 \\
-& \frac{d}{dc} \left( \lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil \right) + \frac{d}{dc} \left(t^{1 - \frac{2c^2}{(1-c)^2}} \right) = 0 \\
-\end{align*}
-
-We now have a problem, because $\lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil$ is not continuous, and cannot be differentiated. Hence, we have to be pessimistic and use the fact that $\lceil \frac{4\log(t)}{(1-c)^2\gap{i}^2} \rceil \leq \frac{4\log(t)}{(1-c)^2\gap{i}^2} + 1$. We can do no better than this.
-
-Hence, using the chain rule:
-
-\begin{align*}
-& \frac{d}{dc} \left( \frac{4\log(t)}{(1-c)^2\gap{i}^2} + 1\right) + \frac{d}{dc} \left(t^{1 - \frac{2c^2}{(1-c)^2}} \right) = 0 \\
-& \frac{d}{dc} \left( \frac{4\log(t)}{(1-c)^2\gap{i}^2} + 1\right) + \left(ln(t) \cdot t^{1 - \frac{2c^2}{(1-c)^2}} \cdot \frac{d}{dc} \left( -\frac{4c}{(1-c)^3} \right) \right) = 0 \\
-& \left( \frac{4log(t)}{\gap{i}^2} \cdot \frac{d}{dc} \left( (1-c)^{-2} \right) \right) + \left(log(t) \cdot t^{1 - \frac{2c^2}{(1-c)^2}} \cdot \frac{d}{dc} \left( -\frac{4c}{(1-c)^3} \right) \right) = 0 \\
-& \left( \frac{8log(t)}{\gap{i}^2 \cdot (1-c)^3} \right) + \left(log(t) \cdot t^{1 - \frac{2c^2}{(1-c)^2}} \cdot \frac{d}{dc} \left( -\frac{4c}{(1-c)^3} \right) \right) = 0 \\
-\end{align*}
-
+Once we set $\lambda = \sqrt{\frac{16klog(n)}{n}}$.
 
 \end{proof}
 
@@ -174,7 +152,6 @@ $$
 $$
 \end{lemma}
 
-\ognote{Can't use prop for some reason}
 \label{lem:increasingSeqUpper}
 \begin{lemma}
 Let $g : \mathbb{N} \to \mathbb{R}$ be increasing, and for each $i \in [k]$, let $S_{i_1}, S_{i_2}, \ldots$ be an infinite sequence of random variables such that for all $\delta \in (0, 1)$,
